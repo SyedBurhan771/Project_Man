@@ -1,0 +1,38 @@
+# =========================
+# Python / Backend
+# =========================
+*.pyc
+*.DS_Store
+*.egg*
+env
+/backend/.venv/
+__pycache__/
+
+# =========================
+# Build / Distribution
+# =========================
+/dist/
+build/
+/staticfiles/
+
+# =========================
+# IDE / Editor
+# =========================
+/.idea
+
+# =========================
+# Documentation
+# =========================
+/docs/_build/
+
+# =========================
+# Database / Env
+# =========================
+#*.sqlite*
+#.env
+
+# =========================
+# Frontend
+# Ignore all node_modules in any frontend subfolder
+# =========================
+**/node_modules/

@@ -1,0 +1,35 @@
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <wss:run soapenv:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" xmlns:wss="http://www.adonix.com/WSS">
+         <callContext xsi:type="wss:CAdxCallContext">
+            <codeLang xsi:type="xsd:string">ENG</codeLang>
+            <poolAlias xsi:type="xsd:string">APDEMO</poolAlias>
+            <poolId xsi:type="xsd:string"></poolId>
+            <requestConfig xsi:type="xsd:string">
+               <![CDATA[adxwss.optreturn=JSON&adxwss.beautify=true]]>
+            </requestConfig>
+         </callContext>
+         
+         <publicName xsi:type="xsd:string">AOWSEXPORT</publicName>
+         
+         <inputXml xsi:type="xsd:string">
+            <![CDATA[{
+               "GRP1": {
+                  "I_MODEXP": "ZPROJNEW",
+                  "I_CHRONO": "NO"
+               },
+               "GRP2": [
+                  {
+                     "I_TCRITERE": "OPPNUM = 'NA0131809000034'"
+                  }
+               ],
+               "GRP3": {
+                  "I_EXEC": "REALTIME",
+                  "I_RECORDSEP": "|"
+               }
+            }]]>
+         </inputXml>
+      </wss:run>
+   </soapenv:Body>
+</soapenv:Envelope>

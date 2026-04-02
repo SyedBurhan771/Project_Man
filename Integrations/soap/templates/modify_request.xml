@@ -1,0 +1,40 @@
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <wss:modify soapenv:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" xmlns:wss="http://www.adonix.com/WSS">
+         <callContext xsi:type="wss:CAdxCallContext">
+            <codeLang xsi:type="xsd:string">ENG</codeLang>
+            <poolAlias xsi:type="xsd:string">APDEMO</poolAlias>
+            <poolId xsi:type="xsd:string"></poolId>
+            <requestConfig xsi:type="xsd:string"><![CDATA[adxwss.optreturn=JSON&adxwss.beautify=true]]></requestConfig>
+         </callContext>
+         <publicName xsi:type="xsd:string">YPRJBUDGET</publicName>
+
+         <objectKeys xsi:type="wss:ArrayOfCAdxParamKeyValue" soapenc:arrayType="wss:CAdxParamKeyValue[]" xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/">
+            <item xsi:type="wss:CAdxParamKeyValue">
+               <key xsi:type="xsd:string">OPPNUM</key>
+               <value xsi:type="xsd:string">{project_id}</value>
+            </item>
+         </objectKeys>
+
+         <objectXml xsi:type="xsd:string">
+            <![CDATA[{
+               "PJM0_1": {
+                  "OPPNUM": "{project_id}",
+                  "SALFCY": "{site}",
+                  "OPEDEFFCY": "{site}",
+                  "PIMDESAXX": "{description}",
+                  "PIMDESAX1": "{short_desc}"
+               },
+               "PJM1_1": {
+                  "OPPCMP": "{customer}",
+                  "OPPREP": "{sales_rep}"
+               },
+               "PJM1_2": {
+                  "OPPTYP": "{category}"
+               }
+            }]]>
+         </objectXml>
+      </wss:modify>
+   </soapenv:Body>
+</soapenv:Envelope>
