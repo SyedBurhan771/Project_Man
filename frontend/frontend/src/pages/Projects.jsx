@@ -6,6 +6,7 @@ import { gql } from "@apollo/client";
 import { useQuery } from "@apollo/client/react";
 // Import real Sage X3 data
 import { sageX3Projects } from '../data/sageX3Projects';
+import API_URL from '../config';   // ← Added this import
 
 // Date parser helper
 const parseSageDate = (dateStr) => {
@@ -115,7 +116,6 @@ const GET_PROJECTS = gql`
 
 function Projects() {
   const navigate = useNavigate();
-  const BACKEND_URL = 'http://127.0.0.1:8000';
   const [newSageProjects, setNewSageProjects] = useState([]);
   const [persistedSageProjects, setPersistedSageProjects] = useState([]);
 
@@ -140,7 +140,7 @@ function Projects() {
   useEffect(() => {
     const fetchPersistedSageProjects = async () => {
       try {
-        const response = await fetch(`${BACKEND_URL}/api/soap/projects/`);
+        const response = await fetch(`${API_URL}/api/soap/projects/`);
         const result = await response.json().catch(() => ({}));
         if (!response.ok || !result.success || !Array.isArray(result.projects)) return;
 
@@ -172,7 +172,7 @@ function Projects() {
     };
 
     fetchPersistedSageProjects();
-  }, [BACKEND_URL]);
+  }, []);
 
   const handleSageProjectCreated = (created) => {
     const projectId = String(created?.project_id || '').trim();
@@ -237,19 +237,6 @@ function Projects() {
                 {project.status}
               </span>
             </div>
-
-            {/* <div className="mb-4">
-              <div className="flex justify-between text-xs mb-1.5">
-                <span className="text-gray-600">Progress</span>
-                <span className="font-semibold text-gray-900">{project.progress}%</span>
-              </div>
-              <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full"
-                  style={{ width: `${project.progress}%` }}
-                ></div>
-              </div>
-            </div> */}
 
             <div className="flex items-center justify-between text-sm text-gray-600">
               <div className="flex items-center gap-2">

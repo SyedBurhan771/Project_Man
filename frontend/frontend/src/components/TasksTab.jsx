@@ -19,6 +19,7 @@ import {
   Pencil,
   CornerDownRight
 } from 'lucide-react';
+import API_URL from '../config';   // ← Added this import
 import { gql } from "@apollo/client";
 import { useQuery } from "@apollo/client/react";
 
@@ -366,8 +367,8 @@ function AddSubtaskModal({ parentTask, project, onClose, onSuccess }) {
 
     setIsCreating(true);
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/ai/create-subtask/', {
-        method: 'POST',
+const response = await fetch(`${API_URL}/api/ai/create-subtask/`, {
+          method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           parentId: parentTask.id,
@@ -597,8 +598,8 @@ function TasksTab({ project, onAssignmentsChange }) {
       return;
     }
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/ai/update-task/', {
-        method: 'POST',
+const response = await fetch(`${API_URL}/api/ai/update-task/`, {
+          method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ taskId, title: editTitle.trim() })
       });
@@ -620,7 +621,7 @@ function TasksTab({ project, onAssignmentsChange }) {
     setIsGenerating(true);
     setAiTasks([]);
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/ai/generate-tasks/', {
+const response = await fetch(`${API_URL}/api/ai/generate-tasks/`, {   // ← Updated
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -648,7 +649,7 @@ function TasksTab({ project, onAssignmentsChange }) {
   const handleCreateTask = async (task) => {
     setIsCreating(true);
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/ai/create-task/', {
+const response = await fetch(`${API_URL}/api/ai/create-task/`, {   // ← Updated
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

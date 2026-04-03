@@ -1,8 +1,9 @@
 import { ApolloClient, InMemoryCache, HttpLink } from '@apollo/client';
+import API_URL from './config';     // ← Yeh line add ki hai
 
 const client = new ApolloClient({
   link: new HttpLink({
-    uri: 'http://127.0.0.1:8000/graphql/',   // your backend GraphQL endpoint
+    uri: `${API_URL}/graphql/`,     // ← Yeh line change ho gayi
   }),
   cache: new InMemoryCache(),
 });

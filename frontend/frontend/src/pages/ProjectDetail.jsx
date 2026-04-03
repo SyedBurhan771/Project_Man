@@ -16,6 +16,7 @@ import SprintsTab from "../components/SprintsTab";
 import MilestonesTab from "../components/MilestonesTab";
 
 import { projects } from "../pages/Projects";
+import API_URL from '../config';
 import { gql } from "@apollo/client";
 import { useQuery } from "@apollo/client/react";
 
@@ -92,7 +93,7 @@ function Section({ id, title, icon: Icon, children, isOpen, toggleSection }) {
 function ProjectDetail() {
   const { id } = useParams();
   const location = useLocation();
-  const BACKEND_URL = "http://127.0.0.1:8000";
+  //const BACKEND_URL = "http://127.0.0.1:8000";
 
   // ====================== ALL HOOKS MUST BE AT THE TOP ======================
   // UI state refs - MOVED TO TOP
@@ -116,7 +117,7 @@ function ProjectDetail() {
   useEffect(() => {
     const fetchPersistedSageProjects = async () => {
       try {
-        const response = await fetch(`${BACKEND_URL}/api/soap/projects/`);
+        const response = await fetch(`${API_URL}/api/soap/projects/`);   // ← Updated
         const result = await response.json().catch(() => ({}));
         if (!response.ok || !result.success || !Array.isArray(result.projects)) {
           setPersistedSageProjects([]);
@@ -177,7 +178,7 @@ function ProjectDetail() {
     };
 
     fetchPersistedSageProjects();
-  }, [BACKEND_URL]);
+  }, []);
 
   // ── 1. Memoize Sage project lookup — stable, never re-runs unless id changes
   const routeProject = useMemo(() => {

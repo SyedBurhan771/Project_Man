@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { Sparkles, Plus, Loader2, Send, RotateCcw, Bot, Database, ArrowLeft, PencilLine, CheckCircle2, AlertCircle } from 'lucide-react'
+import API_URL from '../config';   // ← Added this import
 
 function AICreateProject({ buttonText = 'AI Create Project', onSageProjectCreated }) {
   const [open, setOpen] = useState(false)
@@ -44,9 +45,7 @@ function AICreateProject({ buttonText = 'AI Create Project', onSageProjectCreate
       }
     }
   }, [])
-
-  const BACKEND_URL = 'http://127.0.0.1:8000'
-
+  
   const showStatus = (type, message) => {
     setModalStatus({ type, message })
   }
@@ -86,7 +85,7 @@ function AICreateProject({ buttonText = 'AI Create Project', onSageProjectCreate
     setIsLoading(true)
 
     try {
-      const response = await fetch(`${BACKEND_URL}/api/ai/generate-ideas/`, {
+      const response = await fetch(`${API_URL}/api/ai/generate-ideas/`, {   // ← Updated
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: [...messages, userMessage] }),
@@ -152,7 +151,7 @@ function AICreateProject({ buttonText = 'AI Create Project', onSageProjectCreate
 
   const handleCreateAIProject = async (project) => {
     try {
-      const response = await fetch(`${BACKEND_URL}/api/ai/create-project/`, {
+      const response = await fetch(`${API_URL}/api/ai/create-project/`, {   // ← Updated
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(project),
@@ -181,7 +180,7 @@ function AICreateProject({ buttonText = 'AI Create Project', onSageProjectCreate
 
     setIsSubmittingSage(true)
     try {
-      const response = await fetch(`${BACKEND_URL}/api/soap/projects/`, {
+      const response = await fetch(`${API_URL}/api/soap/projects/`, {   // ← Updated
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(sageForm),
@@ -220,7 +219,7 @@ function AICreateProject({ buttonText = 'AI Create Project', onSageProjectCreate
     setIsSubmittingModify(true)
     try {
       const { project_id, ...payload } = modifyForm
-      const response = await fetch(`${BACKEND_URL}/api/soap/projects/${encodeURIComponent(project_id)}/`, {
+      const response = await fetch(`${API_URL}/api/soap/projects/${encodeURIComponent(project_id)}/`, {   // ← Updated
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -356,12 +355,12 @@ function AICreateProject({ buttonText = 'AI Create Project', onSageProjectCreate
       </div>
 
       <button
-  type="submit"
-  disabled={isSubmittingSage}
-  className="w-full py-2.5 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-xl font-medium hover:from-green-600 hover:to-green-800 disabled:opacity-60"
->
-  {isSubmittingSage ? 'Creating...' : 'Create Sage Project'}
-</button>
+        type="submit"
+        disabled={isSubmittingSage}
+        className="w-full py-2.5 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-xl font-medium hover:from-green-600 hover:to-green-800 disabled:opacity-60"
+      >
+        {isSubmittingSage ? 'Creating...' : 'Create Sage Project'}
+      </button>
     </form>
   )
 
@@ -447,12 +446,12 @@ function AICreateProject({ buttonText = 'AI Create Project', onSageProjectCreate
       </div>
 
       <button
-  type="submit"
-  disabled={isSubmittingModify}
-  className="w-full py-2.5 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-xl font-medium hover:from-green-600 hover:to-green-800 disabled:opacity-60"
->
-  {isSubmittingModify ? 'Updating...' : 'Modify Sage Project'}
-</button>
+        type="submit"
+        disabled={isSubmittingModify}
+        className="w-full py-2.5 bg-gradient-to-r from-green-500 to-green-700 text-white rounded-xl font-medium hover:from-green-600 hover:to-green-800 disabled:opacity-60"
+      >
+        {isSubmittingModify ? 'Updating...' : 'Modify Sage Project'}
+      </button>
     </form>
   )
 
@@ -643,4 +642,3 @@ function AICreateProject({ buttonText = 'AI Create Project', onSageProjectCreate
 }
 
 export default AICreateProject
-
