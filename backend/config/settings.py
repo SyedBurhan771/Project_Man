@@ -9,6 +9,9 @@ PROJECT_ROOT = BASE_DIR.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+
+import dj_database_url
+
 # Load backend/.env so Django uses your local credentials directly.
 load_dotenv(BASE_DIR / '.env')
 
@@ -75,24 +78,12 @@ PG_USER = os.getenv('PG_USER')
 PG_PASSWORD = os.getenv('PG_PASSWORD')
 PG_DATABASE = os.getenv('PG_DATABASE')
 
-if all([PG_HOST, PG_PORT, PG_USER, PG_PASSWORD, PG_DATABASE]):
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': PG_DATABASE,
-            'USER': PG_USER,
-            'PASSWORD': PG_PASSWORD,
-            'HOST': PG_HOST,
-            'PORT': PG_PORT,
-        }
-    }
-else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
-    }
+DATABASES = {
+    'default': dj_database_url.config(
+        default=os.environ.get('DATABASE_URL'),
+        conn_max_age=600
+    )
+}
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
