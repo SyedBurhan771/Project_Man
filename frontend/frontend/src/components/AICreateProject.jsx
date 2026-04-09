@@ -87,7 +87,7 @@ function AICreateProject({ buttonText = 'AI Create Project', onSageProjectCreate
     try {
       const response = await fetch(`${API_URL}/api/ai/generate-ideas/`, {   // ← Updated
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json' ,'ngrok-skip-browser-warning': 'true'},
         body: JSON.stringify({ messages: [...messages, userMessage] }),
       })
 
@@ -153,7 +153,7 @@ function AICreateProject({ buttonText = 'AI Create Project', onSageProjectCreate
     try {
       const response = await fetch(`${API_URL}/api/ai/create-project/`, {   // ← Updated
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json' ,'ngrok-skip-browser-warning': 'true'},
         body: JSON.stringify(project),
       })
 
@@ -182,7 +182,7 @@ function AICreateProject({ buttonText = 'AI Create Project', onSageProjectCreate
     try {
       const response = await fetch(`${API_URL}/api/soap/projects/`, {   // ← Updated
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json','ngrok-skip-browser-warning': 'true' },
         body: JSON.stringify(sageForm),
       })
 
@@ -221,7 +221,7 @@ function AICreateProject({ buttonText = 'AI Create Project', onSageProjectCreate
       const { project_id, ...payload } = modifyForm
       const response = await fetch(`${API_URL}/api/soap/projects/${encodeURIComponent(project_id)}/`, {   // ← Updated
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json' , 'ngrok-skip-browser-warning': 'true'},
         body: JSON.stringify(payload),
       })
 
