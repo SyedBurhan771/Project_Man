@@ -11,7 +11,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 
 import dj_database_url
-
+ 
 # Load backend/.env so Django uses your local credentials directly.
 load_dotenv(BASE_DIR / '.env')
 
@@ -78,10 +78,14 @@ PG_USER = os.getenv('PG_USER')
 PG_PASSWORD = os.getenv('PG_PASSWORD')
 PG_DATABASE = os.getenv('PG_DATABASE')
 
+DATABASE_URL = os.environ.get('DATABASE_URL') or \
+    f"postgres://{PG_USER}:{PG_PASSWORD}@{PG_HOST}:{PG_PORT}/{PG_DATABASE}"
+
 DATABASES = {
     'default': dj_database_url.config(
-        default=os.environ.get('DATABASE_URL'),
-        conn_max_age=600
+        default=DATABASE_URL,
+        conn_max_age=600,
+        # ssl_require=False   # uncomment if you get SSL errors on local
     )
 }
 AUTH_PASSWORD_VALIDATORS = [
@@ -126,6 +130,7 @@ REST_FRAMEWORK = {
 
 CORS_ALLOWED_ORIGINS = [
     "https://your-vercel-app.vercel.app",
+    "https://emancipative-elle-ascitical.ngrok-free.dev",
     "https://project-man-1.onrender.com",
     'http://localhost:3000',
     'http://127.0.0.1:3000',

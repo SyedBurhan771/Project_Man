@@ -14,11 +14,8 @@ class Project(models.Model):
     def __str__(self):
         return self.name
 
-
-
     class Meta:
         ordering = ['-created_at']
-
 
 
 class Task(models.Model):
@@ -44,8 +41,23 @@ class Task(models.Model):
     person_responsible = models.CharField(max_length=100, blank=True)
     due_date = models.DateField(null=True, blank=True)
     progress = models.PositiveIntegerField(default=0)
+
+    # 🔥 NEW FIELD - This stores "TAS00000000643"
+    task_code = models.CharField(max_length=20, unique=True, blank=True, null=True, editable=False)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    def save(self, *args, **kwargs):
+        """Auto-generate TAS00000000643 style code for new tasks"""
+        is_new = self.pk is None
+        super().save(*args, **kwargs)   # save first so we get the real PK
+
+        if is_new and not self.task_code:
+            # Generate TAS + 9-digit zero-padded ID
+            self.task_code = f"TAS{str(self.pk).zfill(9)}"
+            # Update only the task_code field (no recursion)
+            super().save(update_fields=['task_code'])
 
     def __str__(self):
         return f"{self.title} ({self.project.name})"

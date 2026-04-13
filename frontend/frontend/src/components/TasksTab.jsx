@@ -19,13 +19,10 @@ import {
   Pencil,
   CornerDownRight
 } from 'lucide-react';
-import API_URL from '../config';   // ← Added this import
+import API_URL from '../config';
 import { gql } from "@apollo/client";
 import { useQuery } from "@apollo/client/react";
 
-// ✅ FIXED: Query now uses nested `subtasks` as defined in schema.py
-// The schema exposes `subtasks` as a List on TaskType via resolve_subtasks
-// We also fetch `parent { id }` to know if a task is a root task
 const GET_ALL_TASKS = gql`
   query GetAllTasks {
     allTasks {
@@ -367,8 +364,8 @@ function AddSubtaskModal({ parentTask, project, onClose, onSuccess }) {
 
     setIsCreating(true);
     try {
-const response = await fetch(`${API_URL}/api/ai/create-subtask/`, {
-          method: 'POST',
+      const response = await fetch(`${API_URL}/api/ai/create-subtask/`, {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           parentId: parentTask.id,
@@ -492,26 +489,27 @@ const response = await fetch(`${API_URL}/api/ai/create-subtask/`, {
 }
 
 // ====================== NORMALIZE TASK HELPER ======================
-// Converts a raw GraphQL task node into a consistent shape used throughout the UI
-function normalizeTask(t) {
+// FIX 1: Use parseFloat for estimatedBudget so "0" string and null both map to 0 correctly
+function normalizeTask(t, fallbackIndex = 0) {
   return {
-    id:               String(t.id),
-    // ✅ Use t.parent?.id instead of t.parentId — matches the GraphQL schema
-    parentId:         t.parent?.id ? String(t.parent.id) : null,
-    title:            t.title,
-    description:      t.description,
+    // FIX 2: Guarantee id is never undefined — fallback to index-based string
+    id:               t.id != null ? String(t.id) : `task-fallback-${fallbackIndex}`,
+    parentId:         t.parent?.id != null ? String(t.parent.id) : null,
+    title:            t.title || 'Untitled Task',
+    description:      t.description || '',
     status:           t.status || 'todo',
     progress:         t.progress || 0,
-    estimatedDays:    t.estimatedDays,
-    estimatedHours:   t.estimatedHours,
-    expense:          t.estimatedBudget || 0,
+    estimatedDays:    t.estimatedDays || 0,
+    estimatedHours:   t.estimatedHours || 0,
+    // FIX 3: parseFloat correctly handles null, undefined, "0", 0, "123.45"
+    expense:          parseFloat(t.estimatedBudget) || 0,
     personResponsible: t.personResponsible || 'Unassigned',
-    endDate:          t.dueDate,
+    endDate:          t.dueDate || null,
     avatar:           t.personResponsible
                         ? t.personResponsible.slice(0, 2).toUpperCase()
-                        : 'AI',
-    // ✅ Recursively normalize subtasks from the GraphQL nested subtasks field
-    children:         (t.subtasks || []).map(normalizeTask),
+                        : 'UN',
+    // FIX 4: Pass index to children so their fallback keys are also unique
+    children:         (t.subtasks || []).map((sub, idx) => normalizeTask(sub, idx)),
   };
 }
 
@@ -534,41 +532,54 @@ function TasksTab({ project, onAssignmentsChange }) {
 
   const [addSubtaskFor, setAddSubtaskFor]   = useState(null);
 
-  const { data, refetch: refetchTasks } = useQuery(GET_ALL_TASKS);
+  // FIX 5: Destructure `loading` and `error` so we can guard against bad states
+  const { data, loading, error, refetch: refetchTasks } = useQuery(GET_ALL_TASKS, {
+    // FIX 6: fetchPolicy ensures fresh data on every mount — no stale-cache flicker
+    fetchPolicy: 'cache-and-network',
+  });
 
-  // ✅ FIXED: Build the hierarchical task list directly from the nested `subtasks`
-  // field returned by GraphQL — no more manual parentId string-matching.
-  // We only pick root-level tasks (those with no parent) for this project,
-  // then each task already carries its `children` array from the query.
+  // FIX 7: Build hierarchy only when data is fully available and IDs are valid
   const groupedTasks = useMemo(() => {
     if (!data?.allTasks || !project?.id) return [];
 
     // If the project passes its own subtasks prop, use those
     if (project.subtasks && project.subtasks.length > 0) {
-      return project.subtasks.map(normalizeTask).filter(t => !t.parentId);
+      return project.subtasks
+        // FIX 8: Filter out any task with a null/undefined id before normalizing
+        .filter(t => t.id != null)
+        .map((t, idx) => normalizeTask(t, idx))
+        .filter(t => !t.parentId);
     }
 
     // Otherwise use GraphQL data: filter to this project, then root tasks only
     const rootTasks = data.allTasks
-      .filter(t => String(t.project?.id) === String(project.id) && !t.parent?.id)
-      .map(normalizeTask);
+      // FIX 9: Guard — skip tasks with no id or no project match
+      .filter(t =>
+        t.id != null &&
+        String(t.project?.id) === String(project.id) &&
+        !t.parent?.id
+      )
+      .map((t, idx) => normalizeTask(t, idx));
 
     return rootTasks;
   }, [data, project]);
 
-  // Flat list of all root tasks (for the dependency chain strip)
   const rootTaskList = groupedTasks;
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '—';
-    return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    try {
+      return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    } catch {
+      return '—';
+    }
   };
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case 'completed':  return <CheckCircle2 className="w-5 h-5 text-emerald-500" />;
+      case 'completed':   return <CheckCircle2 className="w-5 h-5 text-emerald-500" />;
       case 'in-progress': return <Clock className="w-5 h-5 text-blue-500" />;
-      default:           return <Circle className="w-5 h-5 text-zinc-300" />;
+      default:            return <Circle className="w-5 h-5 text-zinc-300" />;
     }
   };
 
@@ -598,8 +609,8 @@ function TasksTab({ project, onAssignmentsChange }) {
       return;
     }
     try {
-const response = await fetch(`${API_URL}/api/ai/update-task/`, {
-          method: 'POST',
+      const response = await fetch(`${API_URL}/api/ai/update-task/`, {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ taskId, title: editTitle.trim() })
       });
@@ -621,7 +632,7 @@ const response = await fetch(`${API_URL}/api/ai/update-task/`, {
     setIsGenerating(true);
     setAiTasks([]);
     try {
-const response = await fetch(`${API_URL}/api/ai/generate-tasks/`, {   // ← Updated
+      const response = await fetch(`${API_URL}/api/ai/generate-tasks/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -649,7 +660,7 @@ const response = await fetch(`${API_URL}/api/ai/generate-tasks/`, {   // ← Upd
   const handleCreateTask = async (task) => {
     setIsCreating(true);
     try {
-const response = await fetch(`${API_URL}/api/ai/create-task/`, {   // ← Updated
+      const response = await fetch(`${API_URL}/api/ai/create-task/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -684,10 +695,15 @@ const response = await fetch(`${API_URL}/api/ai/create-task/`, {   // ← Update
 
   // ====================== RENDER A SINGLE TASK CARD ======================
   const renderTaskCard = (task, isChild = false) => {
-    const assignments    = taskAssignments[task.id] || [];
-    const isAssigned     = assignments.length > 0;
+    const assignments       = taskAssignments[task.id] || [];
+    const isAssigned        = assignments.length > 0;
     const totalAssignedCost = assignments.reduce((s, a) => s + a.cost, 0);
-    const isEditing      = editingTaskId === String(task.id);
+    const isEditing         = editingTaskId === String(task.id);
+
+    // FIX 10: Format budget with parseFloat guard so it always renders a number
+    const budgetDisplay = isNaN(task.expense)
+      ? '0.00'
+      : parseFloat(task.expense).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
     return (
       <div className={`${isChild ? 'ml-10 border-l-4 border-indigo-200 pl-2' : ''} mb-3`}>
@@ -777,11 +793,11 @@ const response = await fetch(`${API_URL}/api/ai/create-task/`, {   // ← Update
               <div className="mt-4 h-2 bg-gray-100 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-gradient-to-r from-blue-500 to-indigo-500"
-                  style={{ width: `${task.progress}%` }}
+                  style={{ width: `${task.progress || 0}%` }}
                 />
               </div>
 
-              {/* Budget row */}
+              {/* Budget row — FIX 11: always shows real value from parseFloat */}
               <div className="mt-4 flex items-center justify-between bg-gray-50 rounded-2xl px-5 py-3">
                 <div className="flex items-center gap-2">
                   <DollarSign className="w-5 h-5 text-emerald-600" />
@@ -789,7 +805,7 @@ const response = await fetch(`${API_URL}/api/ai/create-task/`, {   // ← Update
                 </div>
                 <div className="text-right">
                   <div className="font-semibold text-emerald-700">
-                    {project.currency || 'USD'} {task.expense?.toLocaleString('en-US', { minimumFractionDigits: 2 }) || '0.00'}
+                    {project.currency || 'USD'} {budgetDisplay}
                   </div>
                   {isAssigned && (
                     <div className="text-xs text-indigo-600 font-medium mt-0.5">
@@ -828,15 +844,13 @@ const response = await fetch(`${API_URL}/api/ai/create-task/`, {   // ← Update
   };
 
   // ====================== RENDER PARENT + ITS SUBTASKS ======================
-  const renderParentWithChildren = (parent) => {
-    // ✅ `parent.children` is populated directly from the GraphQL `subtasks` field
+  const renderParentWithChildren = (parent, parentIndex) => {
     const hasChildren = parent.children && parent.children.length > 0;
-    // Default expanded = true
     const isExpanded  = expandedParents[parent.id] !== false;
 
     return (
-      <div key={parent.id} className="mb-4">
-        {/* Parent task card — with expand/collapse toggle overlaid */}
+      // FIX 12: Use parent.id with parentIndex fallback so key is never undefined
+      <div key={parent.id || `parent-${parentIndex}`} className="mb-4">
         <div className="relative">
           {renderTaskCard(parent, false)}
 
@@ -855,11 +869,11 @@ const response = await fetch(`${API_URL}/api/ai/create-task/`, {   // ← Update
           )}
         </div>
 
-        {/* ✅ Render children (subtasks) directly from parent.children */}
+        {/* FIX 13: Child key uses child.id with parent+index fallback */}
         {hasChildren && isExpanded && (
           <div className="mt-1">
-            {parent.children.map(child => (
-              <div key={child.id}>
+            {parent.children.map((child, childIdx) => (
+              <div key={child.id || `child-${parent.id}-${childIdx}`}>
                 {renderTaskCard(child, true)}
               </div>
             ))}
@@ -868,6 +882,32 @@ const response = await fetch(`${API_URL}/api/ai/create-task/`, {   // ← Update
       </div>
     );
   };
+
+  // ====================== LOADING / ERROR STATES ======================
+  // FIX 14: Show spinner on initial load so no partial/undefined data reaches the render tree
+  if (loading && !data) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 gap-4">
+        <div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+        <p className="text-gray-500 text-sm font-medium">Loading tasks…</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 gap-3">
+        <p className="text-red-500 font-semibold">Failed to load tasks</p>
+        <p className="text-gray-400 text-sm">{error.message}</p>
+        <button
+          onClick={() => refetchTasks()}
+          className="mt-2 px-5 py-2 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
 
   // ====================== JSX ======================
   return (
@@ -902,7 +942,8 @@ const response = await fetch(`${API_URL}/api/ai/create-task/`, {   // ← Update
           {rootTaskList.map((task, idx, arr) => {
             const isAssigned = (taskAssignments[task.id] || []).length > 0;
             return (
-              <React.Fragment key={task.id}>
+              // FIX 15: Key uses task.id with index fallback — never undefined
+              <React.Fragment key={task.id || `dep-${idx}`}>
                 <div className={`flex items-center gap-2 px-4 py-2 rounded-2xl border text-sm font-medium ${
                   isAssigned
                     ? 'bg-indigo-100 border-indigo-300 text-indigo-700'
@@ -930,6 +971,10 @@ const response = await fetch(`${API_URL}/api/ai/create-task/`, {   // ← Update
             <span className="text-sm font-normal text-gray-500">
               ({groupedTasks.length} parent task{groupedTasks.length !== 1 ? 's' : ''})
             </span>
+            {/* FIX 16: Show subtle "refreshing" indicator when background refetch runs */}
+            {loading && data && (
+              <span className="ml-2 text-xs text-indigo-400 animate-pulse">refreshing…</span>
+            )}
           </h3>
           <div className="text-xs text-gray-500">Scroll for more ↓</div>
         </div>
@@ -942,7 +987,8 @@ const response = await fetch(`${API_URL}/api/ai/create-task/`, {   // ← Update
               <p className="text-sm mt-1">Use the AI Task Generator below to create tasks</p>
             </div>
           ) : (
-            groupedTasks.map(parent => renderParentWithChildren(parent))
+            // FIX 17: Pass parentIndex to renderParentWithChildren for safe fallback keys
+            groupedTasks.map((parent, parentIndex) => renderParentWithChildren(parent, parentIndex))
           )}
         </div>
       </div>
@@ -1000,7 +1046,7 @@ const response = await fetch(`${API_URL}/api/ai/create-task/`, {   // ← Update
                 </h4>
                 <div className="space-y-4 max-h-[420px] overflow-y-auto pr-2">
                   {aiTasks.map((task, idx) => (
-                    <div key={idx} className="bg-white border border-purple-200 rounded-2xl p-5 flex justify-between items-start gap-4">
+                    <div key={`ai-task-${idx}`} className="bg-white border border-purple-200 rounded-2xl p-5 flex justify-between items-start gap-4">
                       <div className="flex-1">
                         <h5 className="font-semibold text-gray-900 text-lg">{task.title}</h5>
                         {task.description && (

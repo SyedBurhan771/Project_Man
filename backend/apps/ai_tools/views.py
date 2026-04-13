@@ -297,21 +297,35 @@ def create_subtask(request):
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
-            parent_id = data.get('parentId')
+            parent_id = data.get('parentId')      # This can now be "TAS00000000643" or numeric
             project_id = data.get('projectId')
 
             if not parent_id or not project_id:
                 return JsonResponse({'success': False, 'error': 'parentId and projectId are required'}, status=400)
 
+            # ====================== FIXED LOOKUP ======================
+            # Support the new TAS... code
             try:
-                parent_task = Task.objects.get(id=parent_id)
-                project = Project.objects.get(id=project_id)
-            except (Task.DoesNotExist, Project.DoesNotExist):
-                return JsonResponse({'success': False, 'error': 'Parent task or project not found'}, status=404)
+                if str(parent_id).startswith('TAS') or not str(parent_id).isdigit():
+                    parent_task = Task.objects.get(task_code=parent_id)
+                else:
+                    parent_task = Task.objects.get(id=int(parent_id))
+            except Task.DoesNotExist:
+                return JsonResponse({'success': False, 'error': 'Parent task not found'}, status=404)
 
+            # Project still uses numeric ID (safe fallback)
+            try:
+                if str(project_id).isdigit():
+                    project = Project.objects.get(id=int(project_id))
+                else:
+                    project = Project.objects.get(id=project_id)  # fallback
+            except Project.DoesNotExist:
+                return JsonResponse({'success': False, 'error': 'Project not found'}, status=404)
+
+            # ====================== CREATE SUBTASK ======================
             task = Task.objects.create(
                 project=project,
-                parent=parent_task,                    # ← This makes it a subtask
+                parent=parent_task,
                 title=data.get('title', 'Untitled Subtask'),
                 description=data.get('description', ''),
                 status=data.get('status', 'todo'),
@@ -326,7 +340,8 @@ def create_subtask(request):
             return JsonResponse({
                 'success': True,
                 'message': f'Subtask "{task.title}" created under {parent_task.title}',
-                'task_id': task.id
+                'task_id': task.id,
+                'task_code': task.task_code   # ← nice to return for frontend
             }, status=201)
 
         except Exception as e:
