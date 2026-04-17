@@ -37,3 +37,19 @@ class SoapProjectTransaction(models.Model):
     def __str__(self):
         status = 'OK' if self.success else 'ERR'
         return f'SOAP {self.operation.upper()} Txn {self.id} [{status}] {self.project_id or "-"}'
+
+
+class SageCustomer(models.Model):
+    code = models.CharField(max_length=50, unique=True)
+    description = models.CharField(max_length=255)
+
+    def __str__(self):
+        return f"{self.code} - {self.description}"
+
+
+class SageSite(models.Model):
+    code = models.CharField(max_length=50, unique=True)
+    description = models.CharField(max_length=255)
+
+    def __str__(self):
+        return f"{self.code} - {self.description}"

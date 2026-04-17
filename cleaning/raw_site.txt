@@ -1,0 +1,182 @@
+[
+	{
+		"C1": "AE10 AE Discrete",
+		"FCY": "AE011",
+		"FCYNAM": "Computer Products",
+		"FCYSHO": "AE011"
+	},
+	{
+		"C1": "AE10 AE Discrete",
+		"FCY": "AE012",
+		"FCYNAM": "Bike &amp; Toy Products",
+		"FCYSHO": "AE012"
+	},
+	{
+		"C1": "AO10 Sociedade DisIndustria An",
+		"FCY": "AO011",
+		"FCYNAM": "InfoCenter",
+		"FCYSHO": "InfoCenter"
+	},
+	{
+		"C1": "AO10 Sociedade DisIndustria An",
+		"FCY": "AO012",
+		"FCYNAM": "Manufaturas do Soyo",
+		"FCYSHO": "Industria"
+	},
+	{
+		"C1": "AO20 Sociedade AgroQuiFar Ango",
+		"FCY": "AO021",
+		"FCYNAM": "Agro Alimentar do Namibe",
+		"FCYSHO": "Alimentar"
+	},
+	{
+		"C1": "AO20 Sociedade AgroQuiFar Ango",
+		"FCY": "AO022",
+		"FCYNAM": "N’gola Pharma",
+		"FCYSHO": "Pharma"
+	},
+	{
+		"C1": "AO20 Sociedade AgroQuiFar Ango",
+		"FCY": "AO023",
+		"FCYNAM": "Bioquimica do Bié",
+		"FCYSHO": "Bioquimica"
+	},
+	{
+		"C1": "AP10 AP Automated",
+		"FCY": "AP001",
+		"FCYNAM": "APAUTOMA Los Angeles Distribution C",
+		"FCYSHO": "APAutomate"
+	},
+	{
+		"C1": "AP10 AP Automated",
+		"FCY": "AP002",
+		"FCYNAM": "APAUTOMA Elizabeth Distribution Cen",
+		"FCYSHO": "APAutomate"
+	},
+	{
+		"C1": "AP10 AP Automated",
+		"FCY": "AP003",
+		"FCYNAM": "APAUTOMA Kirkland Retail Store",
+		"FCYSHO": "APAutomate"
+	},
+	{
+		"C1": "AP10 AP Automated",
+		"FCY": "AP004",
+		"FCYNAM": "APAUTOMA Austin Office",
+		"FCYSHO": "APAutomate"
+	},
+	{
+		"C1": "AP10 AP Automated",
+		"FCY": "AP005",
+		"FCYNAM": "APAUTOMA Roswell Factory",
+		"FCYSHO": "APAutomate"
+	},
+	{
+		"C1": "AT10 AT Diskrete Fertigung",
+		"FCY": "AT011",
+		"FCYNAM": "Computer &amp; Zubehör",
+		"FCYSHO": "ATCO"
+	},
+	{
+		"C1": "AT10 AT Diskrete Fertigung",
+		"FCY": "AT012",
+		"FCYNAM": "Fahrrad &amp; Zubehör",
+		"FCYSHO": "ATFA"
+	},
+	{
+		"C1": "AU10 AU Discrete",
+		"FCY": "AU011",
+		"FCYNAM": "Aussie Computers",
+		"FCYSHO": "AU Comp"
+	},
+	{
+		"C1": "AU10 AU Discrete",
+		"FCY": "AU012",
+		"FCYNAM": "Aussie Bikes",
+		"FCYSHO": "AU Bikes"
+	},
+	{
+		"C1": "AU20 AU Process",
+		"FCY": "AU021",
+		"FCYNAM": "Food Products",
+		"FCYSHO": "AU Food"
+	},
+	{
+		"C1": "AU20 AU Process",
+		"FCY": "AU022",
+		"FCYNAM": "Pharmaceutical Products",
+		"FCYSHO": "AU Pharma"
+	},
+	{
+		"C1": "AU20 AU Process",
+		"FCY": "AU023",
+		"FCYNAM": "Chemical Products",
+		"FCYSHO": "AU Chemi"
+	},
+	{
+		"C1": "BE20 BE process",
+		"FCY": "BE021",
+		"FCYNAM": "Agrotech BE",
+		"FCYSHO": "Agrotech"
+	},
+	{
+		"C1": "BH10 BH Discrete",
+		"FCY": "BH011",
+		"FCYNAM": "Computer Products",
+		"FCYSHO": "BH011"
+	},
+	{
+		"C1": "BR23 BRAVOVENTURES",
+		"FCY": "BR001",
+		"FCYNAM": "BRAVOVEN Chicago Warehouse",
+		"FCYSHO": ""
+	},
+	{
+		"C1": "BR23 BRAVOVENTURES",
+		"FCY": "BR002",
+		"FCYNAM": "BRAVOVEN Fresno Warehouse",
+		"FCYSHO": ""
+	},
+	{
+		"C1": "BR23 BRAVOVENTURES",
+		"FCY": "BR003",
+		"FCYNAM": "BRAVOVEN Tacoma Distribution Centre",
+		"FCYSHO": ""
+	},
+	{
+		"C1": "BR23 BRAVOVENTURES",
+		"FCY": "BR004",
+		"FCYNAM": "BRAVOVEN Kirkland Regional Hub",
+		"FCYSHO": ""
+	},
+	{
+		"C1": "BR23 BRAVOVENTURES",
+		"FCY": "BR005",
+		"FCYNAM": "BRAVOVEN Buffalo Office",
+		"FCYSHO": ""
+	},
+	{
+		"C1": "BR23 BRAVOVENTURES",
+		"FCY": "BR006",
+		"FCYNAM": "BRAVOVEN Grand Rapids Warehouse",
+		"FCYSHO": ""
+	},
+	{
+		"C1": "CH10 Swiss Discrete",
+		"FCY": "CH011",
+		"FCYNAM": "Computer &amp; Zubehör",
+		"FCYSHO": "CHCO"
+	},
+	{
+		"C1": "CH20 Swiss Prozessfertigung",
+		"FCY": "CH021",
+		"FCYNAM": "Nahrungsmittel",
+		"FCYSHO": "CH021"
+	},
+	{
+		"C1": "CH20 Swiss Prozessfertigung",
+		"FCY": "CH022",
+		"FCYNAM": "Pharmazeutika",
+		"FCYSHO": "CH022"
+	}
+]

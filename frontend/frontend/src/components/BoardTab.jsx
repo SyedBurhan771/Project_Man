@@ -1,27 +1,5 @@
 import React, { useMemo } from 'react';
 import { Circle, Clock, CheckCircle2, Calendar, User, ArrowRight } from 'lucide-react';
-import { gql } from "@apollo/client";
-import { useQuery } from "@apollo/client/react";
-const GET_ALL_TASKS = gql`
-  query GetAllTasks {
-    allTasks {
-      id
-      title
-      description
-      status
-      estimatedDays
-      estimatedHours
-      estimatedBudget
-      personResponsible
-      dueDate
-      progress
-      project {
-        id
-      }
-    }
-  }
-`;
-
 const NEXT_STATUS = {
   'todo':        'in-progress',
   'in-progress': 'completed',
@@ -31,35 +9,32 @@ const NEXT_STATUS = {
 export default function BoardTab({ project, onTaskStatusChange }) {
   if (!project) return <div className="p-8 text-center text-gray-500">No project data</div>;
 
-  // Fetch all tasks and filter by current project
-  const { data } = useQuery(GET_ALL_TASKS);
-
-  const dbTasks = useMemo(() => {
-    if (!data?.allTasks || !project?.id) return [];
-    return data.allTasks.filter(task => 
-      String(task.project?.id) === String(project.id)
-    );
-  }, [data, project?.id]);
-
-  // Use DB tasks for AI projects, otherwise use Sage subtasks
+  // Flatten all tasks and subtasks from the project object
   const subtasks = useMemo(() => {
-    if (dbTasks.length > 0) {
-      return dbTasks.map(t => ({
-        id: String(t.id),
-        title: t.title,
-        status: t.status,
-        progress: t.progress || 0,
-        personResponsible: t.personResponsible || 'Unassigned',
-        endDate: t.dueDate,
-        avatar: t.personResponsible ? t.personResponsible.slice(0, 2).toUpperCase() : 'AI',
-      }));
-    }
-    return project.subtasks || [];
-  }, [dbTasks, project.subtasks]);
+    const flatten = (tasks) => {
+      let result = [];
+      (tasks || []).forEach(t => {
+        result.push({
+          id: String(t.id),
+          title: t.title,
+          status: t.status,
+          progress: t.progress || 0,
+          personResponsible: t.personResponsible || 'Unassigned',
+          endDate: t.endDate || t.startDate || '—',
+          avatar: t.avatar || (t.personResponsible ? t.personResponsible.slice(0, 2).toUpperCase() : 'AI'),
+        });
+        if (t.subtasks && t.subtasks.length > 0) {
+          result = result.concat(flatten(t.subtasks));
+        }
+      });
+      return result;
+    };
+    return flatten(project.subtasks || []);
+  }, [project.subtasks]);
 
-  const todoTasks       = subtasks.filter(t => t.status === 'todo' || !t.status);
-  const inProgressTasks = subtasks.filter(t => t.status === 'in-progress');
-  const doneTasks       = subtasks.filter(t => t.status === 'completed');
+  const todoTasks       = subtasks.filter(t => t.status && String(t.status).toLowerCase() === 'todo' || !t.status);
+  const inProgressTasks = subtasks.filter(t => t.status && String(t.status).toLowerCase() === 'in-progress');
+  const doneTasks       = subtasks.filter(t => t.status && (String(t.status).toLowerCase() === 'completed' || String(t.status).toLowerCase() === 'done'));
 
   const handleMove = (taskId, currentStatus) => {
     if (onTaskStatusChange) {

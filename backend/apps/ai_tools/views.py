@@ -3,7 +3,16 @@ from django.views.decorators.csrf import csrf_exempt
 import json
 import re
 import ollama
-from .models import Project , Task  # ← ONLY THIS LINE ADDED
+from .models import Project, Task
+
+# ====================== COLAB OLLAMA CONFIGURATION ======================
+# ←←← CHANGE THIS URL EVERY TIME YOU GET A NEW LINK FROM GOOGLE COLAB
+OLLAMA_HOST = "http://xxpmi-35-247-167-11.run.pinggy-free.link"   # ← Paste your current Pinggy URL here
+OLLAMA_MODEL = "phi3:mini"
+
+# Create remote client (this talks to Google Colab)
+client = ollama.Client(host=OLLAMA_HOST)
+# =====================================================================
 
 SYSTEM_PROMPT = """You are an expert Project Manager. 
 Your ONLY job is to generate or refine project ideas.
@@ -39,22 +48,25 @@ def generate_project_ideas(request):
 
     try:
         data = json.loads(request.body)
-        messages = data.get("messages", [])  # list of {"role": "user"|"assistant", "content": str}
+        messages = data.get("messages", [])
 
         if not messages:
             return JsonResponse({"error": "No messages provided"}, status=400)
 
-        # Build full message list for Ollama (system + history + last user message)
         ollama_messages = [
             {"role": "system", "content": SYSTEM_PROMPT},
         ] + messages
 
-        # Call Ollama
-        response = ollama.chat(
-            model="phi3:mini",          # ← change to your model if different
+        # ==================== USING COLAB OLLAMA ====================
+        response = client.chat(
+            model=OLLAMA_MODEL,
             messages=ollama_messages,
-            options={"temperature": 0.7}
+            options={
+                "temperature": 0.7,
+                "keep_alive": "30m"
+            }
         )
+        # ===========================================================
 
         ai_content = response["message"]["content"].strip()
 
@@ -63,7 +75,7 @@ def generate_project_ideas(request):
 
         result = {"text": ai_content}
 
-        # Try to parse as JSON projects (most common case)
+        # Try to parse as JSON projects
         try:
             parsed = json.loads(ai_content)
             if isinstance(parsed, list):
@@ -71,7 +83,6 @@ def generate_project_ideas(request):
             elif isinstance(parsed, dict) and "name" in parsed:
                 result["projects"] = [parsed]
         except json.JSONDecodeError:
-            # Fallback: try to extract array from text
             match = re.search(r'\[\s*{.*?}\s*\]', ai_content, re.DOTALL)
             if match:
                 try:
@@ -86,7 +97,7 @@ def generate_project_ideas(request):
         return JsonResponse({"error": str(e)}, status=500)
 
 
-# ====================== NEW FUNCTION ADDED BELOW ======================
+# ====================== CREATE PROJECT (No Change) ======================
 @csrf_exempt
 def create_project(request):
     if request.method == 'POST':
@@ -117,8 +128,7 @@ def create_project(request):
     return JsonResponse({'success': False, 'error': 'Only POST method allowed'}, status=405)
 
 
-
-
+# ====================== CREATE TASK (No Change) ======================
 @csrf_exempt
 def create_task(request):
     if request.method == 'POST':
@@ -158,7 +168,7 @@ def create_task(request):
     return JsonResponse({'success': False, 'error': 'Only POST allowed'}, status=405)
 
 
-# ====================== GENERATE TASKS FOR A SPECIFIC PROJECT ======================
+# ====================== GENERATE TASKS FOR PROJECT (UPDATED) ======================
 @csrf_exempt
 def generate_tasks_for_project(request):
     if request.method != "POST":
@@ -169,7 +179,6 @@ def generate_tasks_for_project(request):
         project = data.get("project", {})
         user_prompt = data.get("prompt", "")
 
-        # ─── NEW STRONG PMP STRUCTURED SYSTEM PROMPT ───────────────────────────────
         TASK_SYSTEM_PROMPT = f"""You are a certified PMP (Project Management Professional) expert helping to structure a complete project management plan.
 
 Project Details:
@@ -224,15 +233,19 @@ Important Guidelines:
             {"role": "user", "content": user_prompt or "Generate complete structured subtasks following PMP methodology for this project"}
         ]
 
-        response = ollama.chat(
-            model="phi3:mini",   # agar better model hai to yahan change kar sakte ho
+        # ==================== USING COLAB OLLAMA ====================
+        response = client.chat(
+            model=OLLAMA_MODEL,
             messages=messages,
-            options={"temperature": 0.65, "num_ctx": 4096}
+            options={
+                "temperature": 0.65,
+                "num_ctx": 4096,
+                "keep_alive": "30m"
+            }
         )
+        # ===========================================================
 
         ai_content = response["message"]["content"].strip()
-
-        # Clean markdown code blocks if any
         ai_content = re.sub(r'^```json\s*|\s*```$', '', ai_content, flags=re.MULTILINE | re.IGNORECASE).strip()
 
         result = {"text": ai_content}
@@ -244,7 +257,6 @@ Important Guidelines:
             elif isinstance(parsed, dict) and "tasks" in parsed:
                 result["tasks"] = parsed["tasks"]
         except:
-            # Fallback extraction
             match = re.search(r'\[\s*\{.*?\}\s*\]', ai_content, re.DOTALL)
             if match:
                 try:
@@ -256,10 +268,9 @@ Important Guidelines:
 
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
-    
 
 
-
+# ====================== REMAINING FUNCTIONS (NO CHANGE) ======================
 @csrf_exempt
 def update_task(request):
     if request.method == 'POST':
@@ -291,20 +302,17 @@ def update_task(request):
     return JsonResponse({'success': False, 'error': 'Only POST allowed'}, status=405)
 
 
-
 @csrf_exempt
 def create_subtask(request):
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
-            parent_id = data.get('parentId')      # This can now be "TAS00000000643" or numeric
+            parent_id = data.get('parentId')
             project_id = data.get('projectId')
 
             if not parent_id or not project_id:
                 return JsonResponse({'success': False, 'error': 'parentId and projectId are required'}, status=400)
 
-            # ====================== FIXED LOOKUP ======================
-            # Support the new TAS... code
             try:
                 if str(parent_id).startswith('TAS') or not str(parent_id).isdigit():
                     parent_task = Task.objects.get(task_code=parent_id)
@@ -313,16 +321,14 @@ def create_subtask(request):
             except Task.DoesNotExist:
                 return JsonResponse({'success': False, 'error': 'Parent task not found'}, status=404)
 
-            # Project still uses numeric ID (safe fallback)
             try:
                 if str(project_id).isdigit():
                     project = Project.objects.get(id=int(project_id))
                 else:
-                    project = Project.objects.get(id=project_id)  # fallback
+                    project = Project.objects.get(id=project_id)
             except Project.DoesNotExist:
                 return JsonResponse({'success': False, 'error': 'Project not found'}, status=404)
 
-            # ====================== CREATE SUBTASK ======================
             task = Task.objects.create(
                 project=project,
                 parent=parent_task,
@@ -341,7 +347,7 @@ def create_subtask(request):
                 'success': True,
                 'message': f'Subtask "{task.title}" created under {parent_task.title}',
                 'task_id': task.id,
-                'task_code': task.task_code   # ← nice to return for frontend
+                'task_code': task.task_code
             }, status=201)
 
         except Exception as e:

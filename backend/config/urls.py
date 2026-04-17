@@ -25,6 +25,11 @@ if settings.ENABLE_REST_API:
     ]
 
 if settings.ENABLE_SOAP_API:
+    from apps.api.soap.views import CustomerDropdownView, SiteDropdownView
+
     urlpatterns += [
         path('api/soap/', include('apps.api.soap.urls')),
+        # Compatibility aliases for frontend calls that omit `/soap/`.
+        path('api/customers/', CustomerDropdownView.as_view(), name='customer-dropdown'),
+        path('api/sites/', SiteDropdownView.as_view(), name='site-dropdown'),
     ]

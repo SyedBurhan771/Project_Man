@@ -1,0 +1,182 @@
+[
+    {
+        "Company_Info": "AE10 AE Discrete",
+        "Site_Code": "AE011",
+        "Site_Name": "Computer Products",
+        "Site_Short_Name": "AE011"
+    },
+    {
+        "Company_Info": "AE10 AE Discrete",
+        "Site_Code": "AE012",
+        "Site_Name": "Bike & Toy Products",
+        "Site_Short_Name": "AE012"
+    },
+    {
+        "Company_Info": "AO10 Sociedade DisIndustria An",
+        "Site_Code": "AO011",
+        "Site_Name": "InfoCenter",
+        "Site_Short_Name": "InfoCenter"
+    },
+    {
+        "Company_Info": "AO10 Sociedade DisIndustria An",
+        "Site_Code": "AO012",
+        "Site_Name": "Manufaturas do Soyo",
+        "Site_Short_Name": "Industria"
+    },
+    {
+        "Company_Info": "AO20 Sociedade AgroQuiFar Ango",
+        "Site_Code": "AO021",
+        "Site_Name": "Agro Alimentar do Namibe",
+        "Site_Short_Name": "Alimentar"
+    },
+    {
+        "Company_Info": "AO20 Sociedade AgroQuiFar Ango",
+        "Site_Code": "AO022",
+        "Site_Name": "N’gola Pharma",
+        "Site_Short_Name": "Pharma"
+    },
+    {
+        "Company_Info": "AO20 Sociedade AgroQuiFar Ango",
+        "Site_Code": "AO023",
+        "Site_Name": "Bioquimica do Bié",
+        "Site_Short_Name": "Bioquimica"
+    },
+    {
+        "Company_Info": "AP10 AP Automated",
+        "Site_Code": "AP001",
+        "Site_Name": "APAUTOMA Los Angeles Distribution C",
+        "Site_Short_Name": "APAutomate"
+    },
+    {
+        "Company_Info": "AP10 AP Automated",
+        "Site_Code": "AP002",
+        "Site_Name": "APAUTOMA Elizabeth Distribution Cen",
+        "Site_Short_Name": "APAutomate"
+    },
+    {
+        "Company_Info": "AP10 AP Automated",
+        "Site_Code": "AP003",
+        "Site_Name": "APAUTOMA Kirkland Retail Store",
+        "Site_Short_Name": "APAutomate"
+    },
+    {
+        "Company_Info": "AP10 AP Automated",
+        "Site_Code": "AP004",
+        "Site_Name": "APAUTOMA Austin Office",
+        "Site_Short_Name": "APAutomate"
+    },
+    {
+        "Company_Info": "AP10 AP Automated",
+        "Site_Code": "AP005",
+        "Site_Name": "APAUTOMA Roswell Factory",
+        "Site_Short_Name": "APAutomate"
+    },
+    {
+        "Company_Info": "AT10 AT Diskrete Fertigung",
+        "Site_Code": "AT011",
+        "Site_Name": "Computer & Zubehör",
+        "Site_Short_Name": "ATCO"
+    },
+    {
+        "Company_Info": "AT10 AT Diskrete Fertigung",
+        "Site_Code": "AT012",
+        "Site_Name": "Fahrrad & Zubehör",
+        "Site_Short_Name": "ATFA"
+    },
+    {
+        "Company_Info": "AU10 AU Discrete",
+        "Site_Code": "AU011",
+        "Site_Name": "Aussie Computers",
+        "Site_Short_Name": "AU Comp"
+    },
+    {
+        "Company_Info": "AU10 AU Discrete",
+        "Site_Code": "AU012",
+        "Site_Name": "Aussie Bikes",
+        "Site_Short_Name": "AU Bikes"
+    },
+    {
+        "Company_Info": "AU20 AU Process",
+        "Site_Code": "AU021",
+        "Site_Name": "Food Products",
+        "Site_Short_Name": "AU Food"
+    },
+    {
+        "Company_Info": "AU20 AU Process",
+        "Site_Code": "AU022",
+        "Site_Name": "Pharmaceutical Products",
+        "Site_Short_Name": "AU Pharma"
+    },
+    {
+        "Company_Info": "AU20 AU Process",
+        "Site_Code": "AU023",
+        "Site_Name": "Chemical Products",
+        "Site_Short_Name": "AU Chemi"
+    },
+    {
+        "Company_Info": "BE20 BE process",
+        "Site_Code": "BE021",
+        "Site_Name": "Agrotech BE",
+        "Site_Short_Name": "Agrotech"
+    },
+    {
+        "Company_Info": "BH10 BH Discrete",
+        "Site_Code": "BH011",
+        "Site_Name": "Computer Products",
+        "Site_Short_Name": "BH011"
+    },
+    {
+        "Company_Info": "BR23 BRAVOVENTURES",
+        "Site_Code": "BR001",
+        "Site_Name": "BRAVOVEN Chicago Warehouse",
+        "Site_Short_Name": ""
+    },
+    {
+        "Company_Info": "BR23 BRAVOVENTURES",
+        "Site_Code": "BR002",
+        "Site_Name": "BRAVOVEN Fresno Warehouse",
+        "Site_Short_Name": ""
+    },
+    {
+        "Company_Info": "BR23 BRAVOVENTURES",
+        "Site_Code": "BR003",
+        "Site_Name": "BRAVOVEN Tacoma Distribution Centre",
+        "Site_Short_Name": ""
+    },
+    {
+        "Company_Info": "BR23 BRAVOVENTURES",
+        "Site_Code": "BR004",
+        "Site_Name": "BRAVOVEN Kirkland Regional Hub",
+        "Site_Short_Name": ""
+    },
+    {
+        "Company_Info": "BR23 BRAVOVENTURES",
+        "Site_Code": "BR005",
+        "Site_Name": "BRAVOVEN Buffalo Office",
+        "Site_Short_Name": ""
+    },
+    {
+        "Company_Info": "BR23 BRAVOVENTURES",
+        "Site_Code": "BR006",
+        "Site_Name": "BRAVOVEN Grand Rapids Warehouse",
+        "Site_Short_Name": ""
+    },
+    {
+        "Company_Info": "CH10 Swiss Discrete",
+        "Site_Code": "CH011",
+        "Site_Name": "Computer & Zubehör",
+        "Site_Short_Name": "CHCO"
+    },
+    {
+        "Company_Info": "CH20 Swiss Prozessfertigung",
+        "Site_Code": "CH021",
+        "Site_Name": "Nahrungsmittel",
+        "Site_Short_Name": "CH021"
+    },
+    {
+        "Company_Info": "CH20 Swiss Prozessfertigung",
+        "Site_Code": "CH022",
+        "Site_Name": "Pharmazeutika",
+        "Site_Short_Name": "CH022"
+    }
+]

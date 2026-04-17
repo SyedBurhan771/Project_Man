@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
-import { useParams, useLocation } from "react-router-dom";
+import { useParams, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, TrendingUp, FileText, DollarSign, Users,
   Target, Kanban, Zap, Flag, ChevronDown, ChevronUp
@@ -49,6 +49,24 @@ const GET_ALL_TASKS = gql`
       personResponsible
       dueDate
       progress
+      parent {
+        id
+      }
+      subtasks {
+        id
+        title
+        description
+        status
+        estimatedDays
+        estimatedHours
+        estimatedBudget
+        personResponsible
+        dueDate
+        progress
+        parent {
+          id
+        }
+      }
       project {
         id
       }
@@ -57,15 +75,15 @@ const GET_ALL_TASKS = gql`
 `;
 
 const tabList = [
-  { id: "overview",   label: "Overview",     icon: LayoutDashboard },
-  { id: "lifecycle",  label: "Lifecycle",     icon: TrendingUp      },
-  { id: "general",    label: "General Info",  icon: FileText        },
-  { id: "financial",  label: "Financial",     icon: DollarSign      },
-  { id: "resources",  label: "Resources",     icon: Users           },
-  { id: "tasks",      label: "Tasks",         icon: Target          },
-  { id: "board",      label: "Board",         icon: Kanban          },
-  { id: "sprints",    label: "Sprints",       icon: Zap             },
-  { id: "milestones", label: "Milestones",    icon: Flag            },
+  { id: "overview", label: "Overview", icon: LayoutDashboard },
+  { id: "lifecycle", label: "Lifecycle", icon: TrendingUp },
+  { id: "general", label: "General Info", icon: FileText },
+  { id: "financial", label: "Financial", icon: DollarSign },
+  { id: "resources", label: "Resources", icon: Users },
+  { id: "tasks", label: "Tasks", icon: Target },
+  { id: "board", label: "Board", icon: Kanban },
+  { id: "sprints", label: "Sprints", icon: Zap },
+  { id: "milestones", label: "Milestones", icon: Flag },
 ];
 
 function Section({ id, title, icon: Icon, children, isOpen, toggleSection }) {
@@ -90,17 +108,15 @@ function Section({ id, title, icon: Icon, children, isOpen, toggleSection }) {
   );
 }
 
-function ProjectDetail() {
+function ProjectDetail({ createMode = false }) {
   const { id } = useParams();
   const location = useLocation();
-  //const BACKEND_URL = "http://127.0.0.1:8000";
+  const navigate = useNavigate();          // ← FIXED: Properly imported and called
 
   // ====================== ALL HOOKS MUST BE AT THE TOP ======================
-  // UI state refs - MOVED TO TOP
   const scrollRef = useRef(null);
   const lastSyncedIdRef = useRef(null);
-  
-  // UI state - MOVED TO TOP
+
   const [activeSection, setActiveSection] = useState("overview");
   const [collapsedSections, setCollapsedSections] = useState({});
   const [liveSubtasks, setLiveSubtasks] = useState([]);
@@ -117,7 +133,7 @@ function ProjectDetail() {
   useEffect(() => {
     const fetchPersistedSageProjects = async () => {
       try {
-        const response = await fetch(`${API_URL}/api/soap/projects/`);   // ← Updated
+        const response = await fetch(`${API_URL}/api/soap/projects/`);
         const result = await response.json().catch(() => ({}));
         if (!response.ok || !result.success || !Array.isArray(result.projects)) {
           setPersistedSageProjects([]);
@@ -180,7 +196,6 @@ function ProjectDetail() {
     fetchPersistedSageProjects();
   }, []);
 
-  // ── 1. Memoize Sage project lookup — stable, never re-runs unless id changes
   const routeProject = useMemo(() => {
     const routeStateProject = location?.state?.project;
     if (!routeStateProject || String(routeStateProject.id) !== String(id)) return null;
@@ -210,18 +225,6 @@ function ProjectDetail() {
     };
   }, [location.state, id]);
 
-  const sageProject = useMemo(() => {
-    const staticProject = projects.find((p) => p.id === id);
-    if (staticProject) return staticProject;
-
-    const persistedProject = persistedSageProjects.find((p) => String(p.id) === String(id));
-    if (persistedProject) return persistedProject;
-
-    if (routeProject) return routeProject;
-    return null;
-  }, [id, persistedSageProjects, routeProject]);
-
-  // ── 2. Memoize DB projects list — only recomputes when GraphQL data changes
   const dbProjects = useMemo(() => {
     return (projectsData?.allProjects || []).map((p) => ({
       id: String(p.id),
@@ -246,66 +249,83 @@ function ProjectDetail() {
       projectResources: [],
       phases: {
         initiation: { status: 'completed', progress: 100, dueDate: '—' },
-        planning:   { status: 'in-progress', progress: 30, dueDate: '—' },
-        execution:  { status: 'pending', progress: 0, dueDate: '—' },
+        planning: { status: 'in-progress', progress: 30, dueDate: '—' },
+        execution: { status: 'pending', progress: 0, dueDate: '—' },
         monitoring: { status: 'pending', progress: 0, dueDate: '—' },
-        testing:    { status: 'pending', progress: 0, dueDate: '—' },
+        testing: { status: 'pending', progress: 0, dueDate: '—' },
         deployment: { status: 'pending', progress: 0, dueDate: '—' },
-        closure:    { status: 'pending', progress: 0, dueDate: '—' },
+        closure: { status: 'pending', progress: 0, dueDate: '—' },
       },
       subtasks: [],
     }));
   }, [projectsData]);
 
-  // ── 3. THE KEY FIX: Memoize DB tasks filtered for THIS project id ───────────
   const dbSubtasksForProject = useMemo(() => {
     if (!tasksData?.allTasks) return [];
-    return tasksData.allTasks
-      .filter(t => String(t.project?.id) === String(id))
-      .map(t => ({
-        id:                String(t.id),
-        title:             t.title,
-        description:       t.description,
-        status:            t.status || 'todo',
-        progress:          t.progress || 0,
-        estimatedDays:     t.estimatedDays,
-        estimatedHours:    t.estimatedHours,
-        expense:           t.estimatedBudget || 0,
-        personResponsible: t.personResponsible || 'Unassigned',
-        endDate:           t.dueDate,
-        avatar:            t.personResponsible
-                             ? t.personResponsible.slice(0, 2).toUpperCase()
-                             : 'AI',
+
+    const tasks = tasksData.allTasks.filter(t => String(t.project?.id) === String(id) && !t.parent?.id);
+
+    return tasks.map(t => ({
+      id: String(t.id),
+      title: t.title,
+      description: t.description,
+      status: t.status || 'todo',
+      progress: t.progress || 0,
+      estimatedDays: t.estimatedDays,
+      estimatedHours: t.estimatedHours,
+      expense: parseFloat(t.estimatedBudget) || 0,
+      personResponsible: t.personResponsible || 'Unassigned',
+      endDate: t.dueDate,
+      parent: t.parent || null,
+      avatar: t.personResponsible ? t.personResponsible.slice(0, 2).toUpperCase() : 'AI',
+      budgets: [],
+      subtasks: (t.subtasks || []).map(sub => ({
+        id: String(sub.id),
+        title: sub.title,
+        description: sub.description,
+        status: sub.status || 'todo',
+        progress: sub.progress || 0,
+        estimatedDays: sub.estimatedDays,
+        estimatedHours: sub.estimatedHours,
+        expense: parseFloat(sub.estimatedBudget) || 0,
+        personResponsible: sub.personResponsible || 'Unassigned',
+        endDate: sub.dueDate,
+        parent: { id: String(t.id) },
+        avatar: sub.personResponsible ? sub.personResponsible.slice(0, 2).toUpperCase() : 'AI',
         budgets: [],
-      }));
+        subtasks: [],
+      })),
+    }));
   }, [tasksData, id]);
 
-  // ── 4. Memoize the fully resolved project object ────────────────────────────
   const project = useMemo(() => {
-    if (sageProject) return sageProject;
+    const staticProject = projects.find((p) => p.id === id);
+    if (staticProject) return staticProject;
+
+    const persistedProject = persistedSageProjects.find((p) => String(p.id) === String(id));
+    if (persistedProject) return persistedProject;
 
     const dbProject = dbProjects.find(p => p.id === String(id));
-    if (!dbProject) return null;
+    if (dbProject) {
+      return { ...dbProject, subtasks: dbSubtasksForProject };
+    }
 
-    return { ...dbProject, subtasks: dbSubtasksForProject };
-  }, [sageProject, dbProjects, dbSubtasksForProject, id]);
+    if (routeProject) {
+      if (routeProject.code && routeProject.code.startsWith('AI-')) {
+        return { ...routeProject, subtasks: dbSubtasksForProject };
+      }
+      return routeProject;
+    }
 
-  // ── 5. liveSubtasks sync — local state that allows BoardTab status changes ────────
+    return null;
+  }, [dbProjects, dbSubtasksForProject, id, persistedSageProjects, routeProject]);
+
   useEffect(() => {
     if (!project) return;
+    setLiveSubtasks(project.subtasks || []);
+  }, [project.subtasks]);
 
-    const subtasks = project.subtasks || [];
-    const projectChanged = lastSyncedIdRef.current !== id;
-    const dbTasksJustArrived = liveSubtasks.length === 0 && subtasks.length > 0;
-
-    if (projectChanged || dbTasksJustArrived) {
-      setLiveSubtasks(subtasks);
-      lastSyncedIdRef.current = id;
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, project]);
-
-  // ── 6. Intersection observer for section tracking - MOVED TO TOP ────────────────────────────
+  // Intersection observer & hash handling (unchanged)
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -329,9 +349,8 @@ function ProjectDetail() {
     return () => observer.disconnect();
   }, []);
 
-  // ── 7. Hash change handler - MOVED TO TOP ────────────────────────────────────────────────────
   useEffect(() => {
-    const scrollTo = (sectionId) => {
+    const scrollToSection = (sectionId) => {
       setCollapsedSections(prev => ({ ...prev, [sectionId]: true }));
       setActiveSection(sectionId);
       window.history.replaceState(null, "", `#${sectionId}`);
@@ -341,29 +360,33 @@ function ProjectDetail() {
 
     const handleHash = () => {
       const hash = window.location.hash.replace("#", "") || "overview";
-      scrollTo(hash);
+      scrollToSection(hash);
     };
     window.addEventListener("hashchange", handleHash);
     handleHash();
     return () => window.removeEventListener("hashchange", handleHash);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── 8. liveProject — stable object passed to every child tab ────────────────
   const liveProject = useMemo(() => {
     if (!project) return null;
     return { ...project, subtasks: liveSubtasks };
   }, [project, liveSubtasks]);
 
-  // ====================== CALLBACKS ======================
   const handleAssignmentsChange = (updatedAssignments) => {
     setTaskAssignments(updatedAssignments);
   };
 
   const handleTaskStatusChange = (taskId, newStatus) => {
-    setLiveSubtasks(prev =>
-      prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t)
-    );
+    const updateTasks = (tasks) => {
+      return tasks.map(t => {
+        if (t.id === taskId) return { ...t, status: newStatus };
+        if (t.subtasks && t.subtasks.length > 0) {
+          return { ...t, subtasks: updateTasks(t.subtasks) };
+        }
+        return t;
+      });
+    };
+    setLiveSubtasks(prev => updateTasks(prev));
   };
 
   const toggleSection = (sectionId) => {
@@ -378,8 +401,7 @@ function ProjectDetail() {
     if (element) element.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
-  // ── NOW CONDITIONAL RETURNS ARE SAFE (all hooks already called) ───
-  if (!sageProject && (projectsLoading || tasksLoading || persistedSageLoading)) {
+  if (!project && (projectsLoading || tasksLoading || persistedSageLoading)) {
     return (
       <div className="flex-1 flex items-center justify-center bg-gray-50">
         <div className="text-center space-y-3">
@@ -392,9 +414,39 @@ function ProjectDetail() {
 
   if (!liveProject) return <div className="p-10 text-red-500">Project not found</div>;
 
+  if (createMode) {
+    return (
+      <div className="flex-1 flex flex-col h-full overflow-hidden bg-gray-50">
+        <div className="bg-white border-b sticky top-0 z-50 shadow-sm">
+          <div className="flex px-8 overflow-x-auto">
+            {tabList.map(tab => (
+              <button
+                key={tab.id}
+                className={`px-6 py-5 text-sm font-medium border-b-2 whitespace-nowrap transition-all ${tab.id === 'general'
+                  ? "border-blue-600 text-blue-600 font-semibold"
+                  : "border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300"
+                }`}
+                disabled={tab.id !== 'general'}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto p-8">
+          <Section id="general" title="General Info" icon={FileText} isOpen={true} toggleSection={() => {}}>
+            <GeneralTab 
+              createMode={true} 
+              onProjectCreated={() => navigate('/projects')} 
+            />
+          </Section>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-gray-50">
-
       {/* Sticky Horizontal Tabs */}
       <div className="bg-white border-b sticky top-0 z-50 shadow-sm">
         <div className="flex px-8 overflow-x-auto">
@@ -402,11 +454,10 @@ function ProjectDetail() {
             <button
               key={tab.id}
               onClick={() => scrollTo(tab.id)}
-              className={`px-6 py-5 text-sm font-medium border-b-2 whitespace-nowrap transition-all ${
-                activeSection === tab.id
+              className={`px-6 py-5 text-sm font-medium border-b-2 whitespace-nowrap transition-all ${activeSection === tab.id
                   ? "border-blue-600 text-blue-600 font-semibold"
                   : "border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300"
-              }`}
+                }`}
             >
               {tab.label}
             </button>
@@ -416,7 +467,6 @@ function ProjectDetail() {
 
       {/* Scrollable Content */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-8">
-
         <Section id="overview" title="Overview" icon={LayoutDashboard}
           isOpen={collapsedSections.overview !== false} toggleSection={toggleSection}>
           <OverviewTab project={liveProject} onViewTasks={() => scrollTo("tasks")} />
@@ -432,7 +482,6 @@ function ProjectDetail() {
           <GeneralTab project={liveProject} />
         </Section>
 
-        {/* Financial tab receives taskAssignments */}
         <Section id="financial" title="Financial" icon={DollarSign}
           isOpen={collapsedSections.financial !== false} toggleSection={toggleSection}>
           <FinancialTab project={liveProject} taskAssignments={taskAssignments} />
@@ -443,7 +492,6 @@ function ProjectDetail() {
           <ResourcesTab project={liveProject} />
         </Section>
 
-        {/* Tasks tab receives onAssignmentsChange callback */}
         <Section id="tasks" title="Tasks" icon={Target}
           isOpen={collapsedSections.tasks !== false} toggleSection={toggleSection}>
           <TasksTab
@@ -469,7 +517,6 @@ function ProjectDetail() {
           isOpen={collapsedSections.milestones !== false} toggleSection={toggleSection}>
           <MilestonesTab project={liveProject} />
         </Section>
-
       </div>
     </div>
   );

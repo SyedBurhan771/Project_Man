@@ -1,0 +1,272 @@
+[
+	{
+		"BPCNUM": "AE001",
+		"BPCNAM": "Al Rostamani Communications ",
+		"BPCSHO": "Al Rostama",
+		"BPCTYP": "1",
+		"BPCTYP_LBL": "Normal",
+		"POSCOD": "",
+		"PTE": "CH30NET"
+	},
+	{
+		"BPCNUM": "AE002",
+		"BPCNAM": "Al Zahra Computers",
+		"BPCSHO": "AE011",
+		"BPCTYP": "1",
+		"BPCTYP_LBL": "Normal",
+		"POSCOD": "",
+		"PTE": "CC"
+	},
+	{
+		"BPCNUM": "AE003",
+		"BPCNAM": "Cosmos Computer Co LLC",
+		"BPCSHO": "Cosmos Com",
+		"BPCTYP": "1",
+		"BPCTYP_LBL": "Normal",
+		"POSCOD": "",
+		"PTE": "CC"
+	},
+	{
+		"BPCNUM": "AE011",
+		"BPCNAM": "Computer Products",
+		"BPCSHO": "AE011",
+		"BPCTYP": "1",
+		"BPCTYP_LBL": "Normal",
+		"POSCOD": "",
+		"PTE": "CC"
+	},
+	{
+		"BPCNUM": "AO001",
+		"BPCNAM": "Luanda BTT.",
+		"BPCSHO": "Luanda BTT",
+		"BPCTYP": "1",
+		"BPCTYP_LBL": "Normal",
+		"POSCOD": "",
+		"PTE": "ANCHQ30FM"
+	},
+	{
+		"BPCNUM": "AO002",
+		"BPCNAM": "Ciclo Belas",
+		"BPCSHO": "CicloBelas",
+		"BPCTYP": "1",
+		"BPCTYP_LBL": "Normal",
+		"POSCOD": "",
+		"PTE": "ANTRF30"
+	},
+	{
+		"BPCNUM": "AO003",
+		"BPCNAM": "Farmácia Saude e Higiene",
+		"BPCSHO": "AngoFarma ",
+		"BPCTYP": "1",
+		"BPCTYP_LBL": "Normal",
+		"POSCOD": "",
+		"PTE": "ANCHQ60"
+	},
+	{
+		"BPCNUM": "AO004",
+		"BPCNAM": "Distribuição Angola Farma",
+		"BPCSHO": "DistrFarm",
+		"BPCTYP": "1",
+		"BPCTYP_LBL": "Normal",
+		"POSCOD": "",
+		"PTE": "ANTRF30"
+	},
+	{
+		"BPCNUM": "AO005",
+		"BPCNAM": "Supermercados do Marçal",
+		"BPCSHO": "SupMarçal",
+		"BPCTYP": "1",
+		"BPCTYP_LBL": "Normal",
+		"POSCOD": "",
+		"PTE": "ANCHQ60"
+	},
+	{
+		"BPCNUM": "AO006",
+		"BPCNAM": "Distribuidora do Caxito",
+		"BPCSHO": "CaxitoDist",
+		"BPCTYP": "1",
+		"BPCTYP_LBL": "Normal",
+		"POSCOD": "",
+		"PTE": "ANCHQ30FM"
+	},
+	{
+		"BPCNUM": "AO007",
+		"BPCNAM": "Brinquedos da Tita",
+		"BPCSHO": "BrincaTita",
+		"BPCTYP": "1",
+		"BPCTYP_LBL": "Normal",
+		"POSCOD": "",
+		"PTE": "ANTRF30"
+	},
+	{
+		"BPCNUM": "AO008",
+		"BPCNAM": "Angola Industrial",
+		"BPCSHO": "ANGINDUX",
+		"BPCTYP": "1",
+		"BPCTYP_LBL": "Normal",
+		"POSCOD": "",
+		"PTE": "ANCHQ30FM"
+	},
+	{
+		"BPCNUM": "AO021",
+		"BPCNAM": "Agro Alimentar do Namibe",
+		"BPCSHO": "Alimentar",
+		"BPCTYP": "1",
+		"BPCTYP_LBL": "Normal",
+		"POSCOD": "",
+		"PTE": "CH30NET"
+	},
+	{
+		"BPCNUM": "AU001",
+		"BPCNAM": "Bike World Pty Ltd",
+		"BPCSHO": "Bike World",
+		"BPCTYP": "1",
+		"BPCTYP_LBL": "Normal",
+		"POSCOD": "2095",
+		"PTE": "CC"
+	},
+	{
+		"BPCNUM": "AU0011",
+		"BPCNAM": "ABC CO",
+		"BPCSHO": "ABC CO",
+		"BPCTYP": "1",
+		"BPCTYP_LBL": "Normal",
+		"POSCOD": "",
+		"PTE": "30NET"
+	},
+	{
+		"BPCNUM": "AU002",
+		"BPCNAM": "Cycles R Us",
+		"BPCSHO": "Cycles rs",
+		"BPCTYP": "1",
+		"BPCTYP_LBL": "Normal",
+		"POSCOD": "3016",
+		"PTE": "CH30EOM20"
+	},
+	{
+		"BPCNUM": "AU003",
+		"BPCNAM": "JB Lee",
+		"BPCSHO": "JB Lee",
+		"BPCTYP": "1",
+		"BPCTYP_LBL": "Normal",
+		"POSCOD": "2601",
+		"PTE": "DDIR30"
+	},
+	{
+		"BPCNUM": "AU004",
+		"BPCNAM": "Bing Hi Fi Pty Ltd",
+		"BPCSHO": "Bing Hi Fi",
+		"BPCTYP": "1",
+		"BPCTYP_LBL": "Normal",
+		"POSCOD": "5007",
+		"PTE": "CH30NET"
+	},
+	{
+		"BPCNUM": "AU005",
+		"BPCNAM": "Happy Foods",
+		"BPCSHO": "Happy Food",
+		"BPCTYP": "1",
+		"BPCTYP_LBL": "Normal",
+		"POSCOD": "6004",
+		"PTE": "CH30NET"
+	},
+	{
+		"BPCNUM": "AU006",
+		"BPCNAM": "Food City Pty Ltd",
+		"BPCSHO": "Food City",
+		"BPCTYP": "1",
+		"BPCTYP_LBL": "Normal",
+		"POSCOD": "4000",
+		"PTE": "CH30NET"
+	},
+	{
+		"BPCNUM": "AU007",
+		"BPCNAM": "Good Labs Pty Ltd",
+		"BPCSHO": "Good Labs",
+		"BPCTYP": "1",
+		"BPCTYP_LBL": "Normal",
+		"POSCOD": "7000",
+		"PTE": "CH30NET"
+	},
+	{
+		"BPCNUM": "AU008",
+		"BPCNAM": "OZ Chemical",
+		"BPCSHO": "OZ Chemi",
+		"BPCTYP": "1",
+		"BPCTYP_LBL": "Normal",
+		"POSCOD": "0800",
+		"PTE": "CH30NET"
+	},
+	{
+		"BPCNUM": "AU009",
+		"BPCNAM": "Aussiepharm",
+		"BPCSHO": "Aussiephrm",
+		"BPCTYP": "1",
+		"BPCTYP_LBL": "Normal",
+		"POSCOD": "2000",
+		"PTE": "CH30NET"
+	},
+	{
+		"BPCNUM": "AU010",
+		"BPCNAM": "Pharmate",
+		"BPCSHO": "Pharmate",
+		"BPCTYP": "1",
+		"BPCTYP_LBL": "Normal",
+		"POSCOD": "3000",
+		"PTE": "CH30NET"
+	},
+	{
+		"BPCNUM": "BE001",
+		"BPCNAM": "BE Concept",
+		"BPCSHO": "BE Concept",
+		"BPCTYP": "1",
+		"BPCTYP_LBL": "Normal",
+		"POSCOD": "1000",
+		"PTE": "BEVIR"
+	},
+	{
+		"BPCNUM": "BE002",
+		"BPCNAM": "Transport bvba",
+		"BPCSHO": "Trans bvba",
+		"BPCTYP": "1",
+		"BPCTYP_LBL": "Normal",
+		"POSCOD": "1000",
+		"PTE": "BEVIR"
+	},
+	{
+		"BPCNUM": "BE003",
+		"BPCNAM": "kreglinger",
+		"BPCSHO": "kreglinger",
+		"BPCTYP": "1",
+		"BPCTYP_LBL": "Normal",
+		"POSCOD": "1000",
+		"PTE": "BEVIR"
+	},
+	{
+		"BPCNUM": "BE004",
+		"BPCNAM": "Technieks bvba",
+		"BPCSHO": "tech bvba",
+		"BPCTYP": "1",
+		"BPCTYP_LBL": "Normal",
+		"POSCOD": "1000",
+		"PTE": "BEVIR"
+	},
+	{
+		"BPCNUM": "BE005",
+		"BPCNAM": "Vervoer Bvba",
+		"BPCSHO": "Vervoer",
+		"BPCTYP": "1",
+		"BPCTYP_LBL": "Normal",
+		"POSCOD": "1000",
+		"PTE": "BEVIR"
+	},
+	{
+		"BPCNUM": "BH001",
+		"BPCNAM": "Global Computers And Electronics",
+		"BPCSHO": "Global Com",
+		"BPCTYP": "1",
+		"BPCTYP_LBL": "Normal",
+		"POSCOD": "",
+		"PTE": "CC"
+	}
+]

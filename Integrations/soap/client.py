@@ -1,5 +1,7 @@
 import os
+import json
 from typing import Any, Dict
+import xml.etree.ElementTree as ET
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -15,21 +17,46 @@ def _load_template(template_name: str) -> str:
     with open(template_path, 'r', encoding='utf-8') as file:
         return file.read()
 
-
 def _render_template(xml_template: str, data: Dict[str, Any]) -> str:
+    """Render XML template by replacing placeholders with actual values"""
+    
     placeholders = {
+        'pool_alias': str(os.getenv('SAGE_POOL_ALIAS', 'APDEMO')).strip() or 'APDEMO',
+        
+        # OPP fields (snake_case)
+        'project_number': str(data.get('project_number', '')).strip(),
+        'sales_site': str(data.get('sales_site', '')).strip(),
+        'operating_site': str(data.get('operating_site', '')).strip(),
+        'customer_bp': str(data.get('customer_bp', '')).strip(),
+        'sales_rep_new': str(data.get('sales_rep_new', '')).strip(),
+        'currency': str(data.get('currency', '')).strip(),
+        'rate_type': str(data.get('rate_type', '')).strip(),
+        'project_type': str(data.get('project_type', '')).strip(),
+        'contact_relation': str(data.get('contact_relation', '')).strip(),
+        'open_date': str(data.get('open_date', '')).strip(),
+        'description': str(data.get('description', '')).strip(),
+        
+        # Legacy fields (as backup)
         'project_id': str(data.get('project_id', '')).strip(),
         'site': str(data.get('site', '')).strip(),
-        'description': str(data.get('description', '')).strip(),
-        'short_desc': str(data.get('short_desc', '')).strip(),
         'customer': str(data.get('customer', '')).strip(),
         'sales_rep': str(data.get('sales_rep', '')).strip(),
+        'short_desc': str(data.get('short_desc', '')).strip(),
         'category': str(data.get('category', '010')).strip() or '010',
     }
 
+    print("=== PLACEHOLDERS BEING USED IN RENDER ===")
+    print(json.dumps(placeholders, indent=2))
+    print("=========================================")
+
     payload = xml_template
     for key, value in placeholders.items():
-        payload = payload.replace(f'{{{key}}}', value)
+        old = f'{{{key}}}'
+        if old in payload:
+            payload = payload.replace(old, value)
+            print(f"Replaced {{{key}}} → {value}")
+        else:
+            print(f"Placeholder {{{key}}} NOT FOUND in template")
 
     return payload
 
@@ -83,8 +110,25 @@ def _send_soap_request(payload: str, soap_action: str) -> str:
 def create_pjm_project(data: Dict[str, Any]) -> str:
     xml_template = _load_template('save_request.xml')
     payload = _render_template(xml_template, data)
+    
+    # === ADD THESE LINES HERE ===
+    print("=== FINAL XML PAYLOAD FOR PJM PROJECT ===")
+    print(payload)
+    print("========================================\n")
+    
     return _send_soap_request(payload, soap_action='save')
 
+
+def create_opp_project(data: Dict[str, Any]) -> str:
+    xml_template = _load_template('save_opp_request.xml')
+    payload = _render_template(xml_template, data)
+    
+    # === ADD THESE LINES HERE ===
+    print("=== FINAL XML PAYLOAD FOR OPP PROJECT ===")
+    print(payload)
+    print("========================================\n")
+    
+    return _send_soap_request(payload, soap_action='save')
 
 def modify_pjm_project(data: Dict[str, Any]) -> str:
     if not str(data.get('project_id', '')).strip():
@@ -93,3 +137,51 @@ def modify_pjm_project(data: Dict[str, Any]) -> str:
     xml_template = _load_template('modify_request.xml')
     payload = _render_template(xml_template, data)
     return _send_soap_request(payload, soap_action='modify')
+
+
+def get_sage_master_data(public_name: str, limit: int = 30):
+    """
+    Fetches master data (Customers or Sites) from Sage X3.
+    public_name: 'BPC' for Customers, 'WSFCY' for Sales Sites.
+    """
+    xml_template = _load_template('codes_data.xml')
+    xml_payload = xml_template.format(public_name=public_name, limit=limit)
+
+    response_text = _send_soap_request(xml_payload, soap_action='query')
+
+    root = ET.fromstring(response_text)
+    result_xml_node = root.find('.//{*}resultXml') or root.find('.//resultXml')
+    if result_xml_node is None or not result_xml_node.text:
+        return []
+
+    raw_data = json.loads(result_xml_node.text)
+    if isinstance(raw_data, dict):
+        raw_data = raw_data.get('result') or raw_data.get('items') or raw_data.get('data') or []
+    if not isinstance(raw_data, list):
+        return []
+
+    formatted_data = []
+
+    for item in raw_data:
+        if not isinstance(item, dict):
+            continue
+        if public_name == "BPC":
+            code = str(item.get("BPCNUM") or "").strip()
+            description = str(item.get("BPCNAM") or "").strip()
+            if not code:
+                continue
+            formatted_data.append({
+                "code": code,
+                "description": description
+            })
+        elif public_name == "WSFCY":
+            code = str(item.get("FCY") or "").strip()
+            description = str(item.get("FCYNAM") or "").strip()
+            if not code:
+                continue
+            formatted_data.append({
+                "code": code,
+                "description": description
+            })
+
+    return formatted_data

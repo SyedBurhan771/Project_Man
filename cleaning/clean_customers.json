@@ -1,0 +1,272 @@
+[
+    {
+        "Customer_Code": "AE001",
+        "Customer_Name": "Al Rostamani Communications",
+        "Customer_Short_Name": "Al Rostama",
+        "Customer_Type_Code": "1",
+        "Customer_Type_Label": "Normal",
+        "Postal_Code": "",
+        "Payment_Term": "CH30NET"
+    },
+    {
+        "Customer_Code": "AE002",
+        "Customer_Name": "Al Zahra Computers",
+        "Customer_Short_Name": "AE011",
+        "Customer_Type_Code": "1",
+        "Customer_Type_Label": "Normal",
+        "Postal_Code": "",
+        "Payment_Term": "CC"
+    },
+    {
+        "Customer_Code": "AE003",
+        "Customer_Name": "Cosmos Computer Co LLC",
+        "Customer_Short_Name": "Cosmos Com",
+        "Customer_Type_Code": "1",
+        "Customer_Type_Label": "Normal",
+        "Postal_Code": "",
+        "Payment_Term": "CC"
+    },
+    {
+        "Customer_Code": "AE011",
+        "Customer_Name": "Computer Products",
+        "Customer_Short_Name": "AE011",
+        "Customer_Type_Code": "1",
+        "Customer_Type_Label": "Normal",
+        "Postal_Code": "",
+        "Payment_Term": "CC"
+    },
+    {
+        "Customer_Code": "AO001",
+        "Customer_Name": "Luanda BTT.",
+        "Customer_Short_Name": "Luanda BTT",
+        "Customer_Type_Code": "1",
+        "Customer_Type_Label": "Normal",
+        "Postal_Code": "",
+        "Payment_Term": "ANCHQ30FM"
+    },
+    {
+        "Customer_Code": "AO002",
+        "Customer_Name": "Ciclo Belas",
+        "Customer_Short_Name": "CicloBelas",
+        "Customer_Type_Code": "1",
+        "Customer_Type_Label": "Normal",
+        "Postal_Code": "",
+        "Payment_Term": "ANTRF30"
+    },
+    {
+        "Customer_Code": "AO003",
+        "Customer_Name": "Farmácia Saude e Higiene",
+        "Customer_Short_Name": "AngoFarma",
+        "Customer_Type_Code": "1",
+        "Customer_Type_Label": "Normal",
+        "Postal_Code": "",
+        "Payment_Term": "ANCHQ60"
+    },
+    {
+        "Customer_Code": "AO004",
+        "Customer_Name": "Distribuição Angola Farma",
+        "Customer_Short_Name": "DistrFarm",
+        "Customer_Type_Code": "1",
+        "Customer_Type_Label": "Normal",
+        "Postal_Code": "",
+        "Payment_Term": "ANTRF30"
+    },
+    {
+        "Customer_Code": "AO005",
+        "Customer_Name": "Supermercados do Marçal",
+        "Customer_Short_Name": "SupMarçal",
+        "Customer_Type_Code": "1",
+        "Customer_Type_Label": "Normal",
+        "Postal_Code": "",
+        "Payment_Term": "ANCHQ60"
+    },
+    {
+        "Customer_Code": "AO006",
+        "Customer_Name": "Distribuidora do Caxito",
+        "Customer_Short_Name": "CaxitoDist",
+        "Customer_Type_Code": "1",
+        "Customer_Type_Label": "Normal",
+        "Postal_Code": "",
+        "Payment_Term": "ANCHQ30FM"
+    },
+    {
+        "Customer_Code": "AO007",
+        "Customer_Name": "Brinquedos da Tita",
+        "Customer_Short_Name": "BrincaTita",
+        "Customer_Type_Code": "1",
+        "Customer_Type_Label": "Normal",
+        "Postal_Code": "",
+        "Payment_Term": "ANTRF30"
+    },
+    {
+        "Customer_Code": "AO008",
+        "Customer_Name": "Angola Industrial",
+        "Customer_Short_Name": "ANGINDUX",
+        "Customer_Type_Code": "1",
+        "Customer_Type_Label": "Normal",
+        "Postal_Code": "",
+        "Payment_Term": "ANCHQ30FM"
+    },
+    {
+        "Customer_Code": "AO021",
+        "Customer_Name": "Agro Alimentar do Namibe",
+        "Customer_Short_Name": "Alimentar",
+        "Customer_Type_Code": "1",
+        "Customer_Type_Label": "Normal",
+        "Postal_Code": "",
+        "Payment_Term": "CH30NET"
+    },
+    {
+        "Customer_Code": "AU001",
+        "Customer_Name": "Bike World Pty Ltd",
+        "Customer_Short_Name": "Bike World",
+        "Customer_Type_Code": "1",
+        "Customer_Type_Label": "Normal",
+        "Postal_Code": "2095",
+        "Payment_Term": "CC"
+    },
+    {
+        "Customer_Code": "AU0011",
+        "Customer_Name": "ABC CO",
+        "Customer_Short_Name": "ABC CO",
+        "Customer_Type_Code": "1",
+        "Customer_Type_Label": "Normal",
+        "Postal_Code": "",
+        "Payment_Term": "30NET"
+    },
+    {
+        "Customer_Code": "AU002",
+        "Customer_Name": "Cycles R Us",
+        "Customer_Short_Name": "Cycles rs",
+        "Customer_Type_Code": "1",
+        "Customer_Type_Label": "Normal",
+        "Postal_Code": "3016",
+        "Payment_Term": "CH30EOM20"
+    },
+    {
+        "Customer_Code": "AU003",
+        "Customer_Name": "JB Lee",
+        "Customer_Short_Name": "JB Lee",
+        "Customer_Type_Code": "1",
+        "Customer_Type_Label": "Normal",
+        "Postal_Code": "2601",
+        "Payment_Term": "DDIR30"
+    },
+    {
+        "Customer_Code": "AU004",
+        "Customer_Name": "Bing Hi Fi Pty Ltd",
+        "Customer_Short_Name": "Bing Hi Fi",
+        "Customer_Type_Code": "1",
+        "Customer_Type_Label": "Normal",
+        "Postal_Code": "5007",
+        "Payment_Term": "CH30NET"
+    },
+    {
+        "Customer_Code": "AU005",
+        "Customer_Name": "Happy Foods",
+        "Customer_Short_Name": "Happy Food",
+        "Customer_Type_Code": "1",
+        "Customer_Type_Label": "Normal",
+        "Postal_Code": "6004",
+        "Payment_Term": "CH30NET"
+    },
+    {
+        "Customer_Code": "AU006",
+        "Customer_Name": "Food City Pty Ltd",
+        "Customer_Short_Name": "Food City",
+        "Customer_Type_Code": "1",
+        "Customer_Type_Label": "Normal",
+        "Postal_Code": "4000",
+        "Payment_Term": "CH30NET"
+    },
+    {
+        "Customer_Code": "AU007",
+        "Customer_Name": "Good Labs Pty Ltd",
+        "Customer_Short_Name": "Good Labs",
+        "Customer_Type_Code": "1",
+        "Customer_Type_Label": "Normal",
+        "Postal_Code": "7000",
+        "Payment_Term": "CH30NET"
+    },
+    {
+        "Customer_Code": "AU008",
+        "Customer_Name": "OZ Chemical",
+        "Customer_Short_Name": "OZ Chemi",
+        "Customer_Type_Code": "1",
+        "Customer_Type_Label": "Normal",
+        "Postal_Code": "0800",
+        "Payment_Term": "CH30NET"
+    },
+    {
+        "Customer_Code": "AU009",
+        "Customer_Name": "Aussiepharm",
+        "Customer_Short_Name": "Aussiephrm",
+        "Customer_Type_Code": "1",
+        "Customer_Type_Label": "Normal",
+        "Postal_Code": "2000",
+        "Payment_Term": "CH30NET"
+    },
+    {
+        "Customer_Code": "AU010",
+        "Customer_Name": "Pharmate",
+        "Customer_Short_Name": "Pharmate",
+        "Customer_Type_Code": "1",
+        "Customer_Type_Label": "Normal",
+        "Postal_Code": "3000",
+        "Payment_Term": "CH30NET"
+    },
+    {
+        "Customer_Code": "BE001",
+        "Customer_Name": "BE Concept",
+        "Customer_Short_Name": "BE Concept",
+        "Customer_Type_Code": "1",
+        "Customer_Type_Label": "Normal",
+        "Postal_Code": "1000",
+        "Payment_Term": "BEVIR"
+    },
+    {
+        "Customer_Code": "BE002",
+        "Customer_Name": "Transport bvba",
+        "Customer_Short_Name": "Trans bvba",
+        "Customer_Type_Code": "1",
+        "Customer_Type_Label": "Normal",
+        "Postal_Code": "1000",
+        "Payment_Term": "BEVIR"
+    },
+    {
+        "Customer_Code": "BE003",
+        "Customer_Name": "kreglinger",
+        "Customer_Short_Name": "kreglinger",
+        "Customer_Type_Code": "1",
+        "Customer_Type_Label": "Normal",
+        "Postal_Code": "1000",
+        "Payment_Term": "BEVIR"
+    },
+    {
+        "Customer_Code": "BE004",
+        "Customer_Name": "Technieks bvba",
+        "Customer_Short_Name": "tech bvba",
+        "Customer_Type_Code": "1",
+        "Customer_Type_Label": "Normal",
+        "Postal_Code": "1000",
+        "Payment_Term": "BEVIR"
+    },
+    {
+        "Customer_Code": "BE005",
+        "Customer_Name": "Vervoer Bvba",
+        "Customer_Short_Name": "Vervoer",
+        "Customer_Type_Code": "1",
+        "Customer_Type_Label": "Normal",
+        "Postal_Code": "1000",
+        "Payment_Term": "BEVIR"
+    },
+    {
+        "Customer_Code": "BH001",
+        "Customer_Name": "Global Computers And Electronics",
+        "Customer_Short_Name": "Global Com",
+        "Customer_Type_Code": "1",
+        "Customer_Type_Label": "Normal",
+        "Postal_Code": "",
+        "Payment_Term": "CC"
+    }
+]

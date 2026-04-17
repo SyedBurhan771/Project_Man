@@ -1,0 +1,16 @@
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <wss:query soapenv:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" xmlns:wss="http://www.adonix.com/WSS">
+         <callContext xsi:type="wss:CAdxCallContext">
+            <codeLang xsi:type="xsd:string">ENG</codeLang>
+            <poolAlias xsi:type="xsd:string">APDEMO</poolAlias>
+            <poolId xsi:type="xsd:string"></poolId>
+            <requestConfig xsi:type="xsd:string"><![CDATA[adxwss.optreturn=JSON&adxwss.beautify=true&adxwss.size=100]]></requestConfig>
+         </callContext>
+         <publicName xsi:type="xsd:string">YPRJBUDGET</publicName>
+         <objectKeys xsi:type="wss:ArrayOfCAdxParamKeyValue" soapenc:arrayType="wss:CAdxParamKeyValue[]" xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/">
+         </objectKeys>
+      </wss:query>
+   </soapenv:Body>
+</soapenv:Envelope>

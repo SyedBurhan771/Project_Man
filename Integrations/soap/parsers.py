@@ -4,10 +4,21 @@ from typing import Any, Dict, Optional
 
 
 def _find_text(root: ET.Element, local_name: str) -> Optional[str]:
+    needle = str(local_name).lower()
     for node in root.iter():
         tag = node.tag
-        if tag == local_name or tag.endswith(f"}}{local_name}"):
+        if "}" in tag:
+            tag = tag.split("}", 1)[1]
+        if str(tag).lower() == needle:
             return (node.text or "").strip()
+    return None
+
+
+def _extract_fault_text(root: ET.Element) -> Optional[str]:
+    for name in ("faultstring", "message", "errormessage", "description"):
+        value = _find_text(root, name)
+        if value:
+            return value
     return None
 
 
@@ -23,6 +34,22 @@ def _extract_error_text(result_payload: Any) -> str:
                         return str(value)
             return str(first)
     return "Sage X3 rejected the payload."
+
+
+def _find_key_deep(payload: Any, key_name: str) -> Optional[str]:
+    if isinstance(payload, dict):
+        for key, value in payload.items():
+            if str(key).upper() == key_name.upper() and value not in (None, ''):
+                return str(value)
+            nested = _find_key_deep(value, key_name)
+            if nested:
+                return nested
+    elif isinstance(payload, list):
+        for item in payload:
+            nested = _find_key_deep(item, key_name)
+            if nested:
+                return nested
+    return None
 
 
 def parse_sage_response(xml_string: str) -> Dict[str, Any]:
@@ -44,9 +71,19 @@ def parse_sage_response(xml_string: str) -> Dict[str, Any]:
         }
 
     if not result_xml_text:
+        if status_text == "1":
+            # Some Sage responses return success status without JSON resultXml payload.
+            return {
+                "success": True,
+                "project_id": None,
+                "data": {},
+                "warning": "SOAP response missing result payload.",
+            }
+        fault_text = _extract_fault_text(root)
         return {
             "success": False,
-            "error": "SOAP response missing result payload.",
+            "error": fault_text or "SOAP response missing result payload.",
+            "status": status_text,
         }
 
     try:
@@ -59,11 +96,7 @@ def parse_sage_response(xml_string: str) -> Dict[str, Any]:
         }
 
     if status_text == "1":
-        project_id = (
-            sage_data.get("PJM0_1", {}).get("OPPNUM")
-            if isinstance(sage_data, dict)
-            else None
-        )
+        project_id = _find_key_deep(sage_data, "OPPNUM")
         return {
             "success": True,
             "project_id": project_id,

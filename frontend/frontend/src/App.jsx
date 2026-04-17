@@ -13,6 +13,7 @@ function App() {
         <Route path="/" element={<Dashboard />} />
         <Route path="/projects" element={<Projects />} />
         <Route path="/board" element={<Board />} />
+        <Route path="/projects/create" element={<ProjectDetail createMode={true} />} />
         <Route path="/projects/:id" element={<ProjectDetail />} />
         <Route path="/resources" element={<Resources />} /> {/* now uses real DB data */}
         {/* Future routes: /sprints, /team, /settings, etc. */}
