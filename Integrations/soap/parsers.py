@@ -26,13 +26,18 @@ def _extract_error_text(result_payload: Any) -> str:
     if isinstance(result_payload, dict):
         messages = result_payload.get("messages") or result_payload.get("MESSAGES")
         if isinstance(messages, list) and messages:
-            first = messages[0]
-            if isinstance(first, dict):
-                for key in ("message", "msg", "text", "MESS"):
-                    value = first.get(key)
-                    if value:
-                        return str(value)
-            return str(first)
+            lines = []
+            for msg in messages:
+                if isinstance(msg, dict):
+                    for key in ("message", "msg", "text", "MESS"):
+                        value = msg.get(key)
+                        if value:
+                            lines.append(str(value))
+                            break
+                else:
+                    lines.append(str(msg))
+            if lines:
+                return " | ".join(lines)
     return "Sage X3 rejected the payload."
 
 
@@ -72,7 +77,6 @@ def parse_sage_response(xml_string: str) -> Dict[str, Any]:
 
     if not result_xml_text:
         if status_text == "1":
-            # Some Sage responses return success status without JSON resultXml payload.
             return {
                 "success": True,
                 "project_id": None,
@@ -95,17 +99,24 @@ def parse_sage_response(xml_string: str) -> Dict[str, Any]:
             "status": status_text,
         }
 
-    if status_text == "1":
+    error_text = _extract_error_text(sage_data)
+
+    # Only trust status codes — never infer success from message text
+    if status_text in ("1", "2"):
         project_id = _find_key_deep(sage_data, "OPPNUM")
+        task_id = _find_key_deep(sage_data, "TASCOD")
+
         return {
             "success": True,
             "project_id": project_id,
+            "task_id": task_id,
             "data": sage_data,
+            "warning": error_text if error_text and error_text != "Sage X3 rejected the payload." else None
         }
 
     return {
         "success": False,
-        "error": _extract_error_text(sage_data),
+        "error": error_text,
         "status": status_text,
         "data": sage_data,
     }

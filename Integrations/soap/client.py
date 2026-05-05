@@ -36,6 +36,25 @@ def _render_template(xml_template: str, data: Dict[str, Any]) -> str:
         'open_date': str(data.get('open_date', '')).strip(),
         'description': str(data.get('description', '')).strip(),
         
+        # NEW: camelCase versions to match the updated XML template
+        'salesSite': str(data.get('sales_site', '')).strip(),
+        'customerBp': str(data.get('customer_bp', '')).strip(),
+        'projectType': str(data.get('project_type', '')).strip(),
+        'salesRep': str(data.get('sales_rep', '')).strip(),
+        
+        # Task fields
+        'POOL_ALIAS': str(os.getenv('SAGE_POOL_ALIAS', 'APDEMO')).strip() or 'APDEMO',
+        'OPPNUM': str(data.get('oppnum', '')).strip(),
+        'TCACOD': str(data.get('tcacod', '')).strip(),
+        'TASCOD': str(data.get('tascod', '')).strip(),
+        'TASFCY': str(data.get('tasfcy', '')).strip(),
+        'TASDESAXX': str(data.get('tasdesaxx', '')).strip(),
+        'TASDESAX1': str(data.get('tasdesax1', '')).strip(),
+        'TASSTARTDT': str(data.get('tasstartdt', '')).strip(),
+        'TASENDDT': str(data.get('tasenddt', '')).strip(),
+        'TASDUR': str(data.get('tasdur', '1')).strip(),
+
+        
         # Legacy fields (as backup)
         'project_id': str(data.get('project_id', '')).strip(),
         'site': str(data.get('site', '')).strip(),
@@ -185,3 +204,13 @@ def get_sage_master_data(public_name: str, limit: int = 30):
             })
 
     return formatted_data
+
+def create_task(data: Dict[str, Any]) -> str:
+    xml_template = _load_template('task_request.xml')
+    payload = _render_template(xml_template, data)
+    
+    print("=== FINAL XML PAYLOAD FOR TASK CREATE ===")
+    print(payload)
+    print("========================================\n")
+    
+    return _send_soap_request(payload, soap_action='run')

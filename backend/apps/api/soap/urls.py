@@ -6,12 +6,15 @@ from .views import (
     CustomerDropdownView,
     SiteDropdownView,
     SyncMasterDataAPIView,
+    CreateTaskAPIView,
 )
 
 urlpatterns = [
     # Your existing endpoints for Project creation and modification
     path('projects/', CreateProjectAPIView.as_view(), name='soap-create-project'),
     path('projects/<str:project_id>/', ModifyProjectAPIView.as_view(), name='soap-modify-project'),
+    
+    path('tasks/', CreateTaskAPIView.as_view(), name='soap-create-task'),
     
     # Your new endpoints for the React dropdown UI
     path('customers/', CustomerDropdownView.as_view(), name='soap-customer-dropdown'),

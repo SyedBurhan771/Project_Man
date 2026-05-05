@@ -7,7 +7,7 @@ from .models import Project, Task
 
 # ====================== COLAB OLLAMA CONFIGURATION ======================
 # ←←← CHANGE THIS URL EVERY TIME YOU GET A NEW LINK FROM GOOGLE COLAB
-OLLAMA_HOST = "http://xxpmi-35-247-167-11.run.pinggy-free.link"   # ← Paste your current Pinggy URL here
+OLLAMA_HOST = "http://qrbhn-35-240-246-73.run.pinggy-free.link"   # ← Paste your current Pinggy URL here
 OLLAMA_MODEL = "phi3:mini"
 
 # Create remote client (this talks to Google Colab)
@@ -53,8 +53,12 @@ def generate_project_ideas(request):
         if not messages:
             return JsonResponse({"error": "No messages provided"}, status=400)
 
+        from datetime import date
+        current_date = date.today().strftime("%Y-%m-%d")
+        dynamic_system_prompt = SYSTEM_PROMPT + f"\n- IMPORTANT: Today's date is {current_date}. Please suggest a correct `dueDate` in the future, NOT an old or past date."
+
         ollama_messages = [
-            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "system", "content": dynamic_system_prompt},
         ] + messages
 
         # ==================== USING COLAB OLLAMA ====================

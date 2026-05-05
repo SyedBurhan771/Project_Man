@@ -6,9 +6,9 @@ from rest_framework.views import APIView
 import json
 from pathlib import Path
 
-from Integrations.soap.client import create_opp_project, create_pjm_project, get_sage_master_data, modify_pjm_project
+from Integrations.soap.client import create_opp_project, create_pjm_project, get_sage_master_data, modify_pjm_project, create_task
 from Integrations.soap.parsers import parse_sage_response
-from .models import SoapProjectTransaction, SageCustomer, SageSite
+from .models import SoapProjectTransaction, SoapTaskTransaction, SageCustomer, SageSite
 
 
 def _safe_cache_get(key, default=None):
@@ -49,10 +49,10 @@ class CreateProjectSerializer(serializers.Serializer):
 
     def validate(self, attrs):
         # New flow: required minimum fields for OPP creation
-        if attrs.get('salesSite') or attrs.get('description') or attrs.get('currency') or attrs.get('customerBP') or attrs.get('openDate'):
+        if attrs.get('salesSite') or attrs.get('description')  or attrs.get('customerBP') or attrs.get('openDate'):
             missing = [
                 field_name
-                for field_name in ('salesSite', 'description', 'currency')
+                for field_name in ('salesSite', 'description')
                 if not str(attrs.get(field_name) or '').strip()
             ]
             if missing:
@@ -138,6 +138,19 @@ class CreateProjectAPIView(APIView):
                 'category': category_value,
                 'sales_rep': sales_rep_value,
                 'created_at': txn.created_at,
+                
+                # New fields for General Tab UI compatibility
+                'projectNum': str(payload.get('projectNumber') or project_id),
+                'salesSite': site_value,
+                'operatingSite': str(payload.get('operatingSite') or ''),
+                'customerBP': customer_value,
+                'salesRep': sales_rep_value,
+                'currency': str(payload.get('currency') or ''),
+                'rateType': str(payload.get('rateType') or ''),
+                'projectType': str(payload.get('projectType') or ''),
+                'contactRelation': str(payload.get('contactRelation') or ''),
+                'openDate': str(payload.get('openDate') or ''),
+                'projectName': str(payload.get('description') or ''),
             })
             seen_project_ids.add(project_id)
 
@@ -215,7 +228,18 @@ class ModifyProjectAPIView(APIView):
         parsed_result = {}
 
         try:
-            raw_xml_response = modify_pjm_project(payload)
+            # Map frontend camelCase fields to snake_case expected by client.py
+            mapped_payload = {
+                'project_id': payload.get('project_id', ''),
+                'sales_site': payload.get('salesSite', '') or payload.get('site', ''),
+                'operating_site': payload.get('operatingSite', ''),
+                'customer_bp': payload.get('customerBP', '') or payload.get('customer', ''),
+                'sales_rep': payload.get('salesRep', '') or payload.get('sales_rep', ''),
+                'project_type': payload.get('projectType', '') or payload.get('category', ''),
+                'description': payload.get('description', ''),
+                'short_desc': payload.get('short_desc', ''),
+            }
+            raw_xml_response = modify_pjm_project(mapped_payload)
             parsed_result = parse_sage_response(raw_xml_response)
             if parsed_result.get('success') and not parsed_result.get('project_id'):
                 parsed_result['project_id'] = project_id
@@ -230,7 +254,151 @@ class ModifyProjectAPIView(APIView):
         return Response(parsed_result, status=400)
 
 
+class CreateTaskSerializer(serializers.Serializer):
+    oppnum = serializers.CharField(max_length=40, required=False, allow_blank=True)
+    tcacod = serializers.CharField(max_length=40, required=False, allow_blank=True)
+    tascod = serializers.CharField(max_length=40, required=False, allow_blank=True)
+    tasfcy = serializers.CharField(max_length=20, required=False, allow_blank=True)
+    tasdesaxx = serializers.CharField(max_length=80, required=False, allow_blank=True)
+    tasdesax1 = serializers.CharField(max_length=80, required=False, allow_blank=True)
+    tasstartdt = serializers.CharField(max_length=10, required=False, allow_blank=True)
+    tasenddt = serializers.CharField(max_length=10, required=False, allow_blank=True)
+    tasdur = serializers.CharField(max_length=10, required=False, allow_blank=True)
+
+    oppNum = serializers.CharField(max_length=40, required=False, allow_blank=True)
+    tcaCod = serializers.CharField(max_length=40, required=False, allow_blank=True)
+    tasCod = serializers.CharField(max_length=40, required=False, allow_blank=True)
+    tasFcy = serializers.CharField(max_length=20, required=False, allow_blank=True)
+    tasDesAxx = serializers.CharField(max_length=80, required=False, allow_blank=True)
+    tasDesAx1 = serializers.CharField(max_length=80, required=False, allow_blank=True)
+    tasStartDt = serializers.CharField(max_length=10, required=False, allow_blank=True)
+    tasEndDt = serializers.CharField(max_length=10, required=False, allow_blank=True)
+    tasDur = serializers.CharField(max_length=10, required=False, allow_blank=True)
+
+    def validate(self, attrs):
+        mapped = {}
+        for key in ['oppnum', 'tcacod', 'tascod', 'tasfcy', 'tasdesaxx', 'tasdesax1', 'tasstartdt', 'tasenddt', 'tasdur']:
+            if key == 'oppnum': camel_key = 'oppNum'
+            elif key == 'tcacod': camel_key = 'tcaCod'
+            elif key == 'tascod': camel_key = 'tasCod'
+            elif key == 'tasfcy': camel_key = 'tasFcy'
+            elif key == 'tasdesaxx': camel_key = 'tasDesAxx'
+            elif key == 'tasdesax1': camel_key = 'tasDesAx1'
+            elif key == 'tasstartdt': camel_key = 'tasStartDt'
+            elif key == 'tasenddt': camel_key = 'tasEndDt'
+            elif key == 'tasdur': camel_key = 'tasDur'
+
+            mapped[key] = str(attrs.get(key) or attrs.get(camel_key) or '').strip()
+            
+        if not mapped.get('oppnum') or not mapped.get('tascod'):
+            raise serializers.ValidationError("oppnum (project ID) and tascod (task ID) are required fields.")
+            
+        # Format dates to MM/DD/YY as expected by Sage X3
+        for date_field in ['tasstartdt', 'tasenddt']:
+            raw_date = mapped.get(date_field)
+            if len(raw_date) == 10 and '/' in raw_date:
+                # DD/MM/YYYY -> MM/DD/YY
+                mapped[date_field] = f"{raw_date[3:5]}/{raw_date[0:2]}/{raw_date[8:10]}"
+            elif len(raw_date) == 10 and '-' in raw_date:
+                # YYYY-MM-DD -> MM/DD/YY
+                mapped[date_field] = f"{raw_date[5:7]}/{raw_date[8:10]}/{raw_date[2:4]}"
+            elif len(raw_date) == 8 and '-' not in raw_date:
+                # YYYYMMDD -> MM/DD/YY
+                mapped[date_field] = f"{raw_date[4:6]}/{raw_date[6:8]}/{raw_date[2:4]}"
+            elif not raw_date:
+                mapped[date_field] = timezone.now().strftime('%m/%d/%y')
+
+        return mapped
+
+
+def _record_task_transaction(request, operation, payload, raw_xml_response, parsed_result):
+    SoapTaskTransaction.objects.create(
+        operation=operation,
+        request_payload=payload,
+        response_xml=raw_xml_response,
+        parsed_response=parsed_result,
+        success=bool(parsed_result.get('success')),
+        project_id=str(parsed_result.get('project_id') or payload.get('oppnum') or ''),
+        task_id=str(parsed_result.get('task_id') or payload.get('tascod') or ''),
+        soap_status=str(parsed_result.get('status') or ''),
+        error_message=str(parsed_result.get('error') or ''),
+        requested_by=request.user if getattr(request, 'user', None) and request.user.is_authenticated else None,
+    )
+
+
+class CreateTaskAPIView(APIView):
+    def get(self, request):
+        oppnum = request.query_params.get('oppnum')
+        transactions = (
+            SoapTaskTransaction.objects
+            .filter(operation=SoapTaskTransaction.OPERATION_CREATE, success=True)
+            .order_by('-created_at')
+        )
+
+        unique_tasks = []
+        seen_task_ids = set()
+
+        for txn in transactions:
+            payload = txn.request_payload or {}
+            txn_oppnum = str(payload.get('oppnum') or '').strip()
+            
+            if oppnum and txn_oppnum != oppnum:
+                continue
+
+            task_id = str(txn.task_id or '').strip()
+            if not task_id or task_id in seen_task_ids:
+                continue
+                
+            unique_tasks.append({
+                'taskCode': task_id,
+                'category': str(payload.get('tcacod') or ''),
+                'status': '1', # default active
+                'startDate': str(payload.get('tasstartdt') or ''),
+                'endDate': str(payload.get('tasenddt') or ''),
+                'progress': 0,
+                'budgetLink': '',
+                'personResponsible': '',
+                'systemId': task_id,
+                'description': str(payload.get('tasdesaxx') or ''),
+                'shortDesc': str(payload.get('tasdesax1') or ''),
+                'duration': str(payload.get('tasdur') or ''),
+                'fcy': str(payload.get('tasfcy') or ''),
+                'oppnum': txn_oppnum,
+                'created_at': txn.created_at,
+            })
+            seen_task_ids.add(task_id)
+
+        return Response({'success': True, 'tasks': unique_tasks}, status=200)
+
+    def post(self, request):
+        print("=== RAW REQUEST DATA FOR TASK CREATE ===")
+        print(json.dumps(request.data, indent=2))
+        print("=====================================")
+
+        serializer = CreateTaskSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        payload = serializer.validated_data
+
+        raw_xml_response = ''
+        parsed_result = {}
+
+        try:
+            raw_xml_response = create_task(payload)
+            parsed_result = parse_sage_response(raw_xml_response)
+        except Exception as exc:
+            parsed_result = {'success': False, 'error': str(exc)}
+
+        _record_task_transaction(request, SoapTaskTransaction.OPERATION_CREATE, payload, raw_xml_response, parsed_result)
+
+        if parsed_result.get('success'):
+            return Response(parsed_result, status=201)
+
+        return Response(parsed_result, status=400)
+
+
 # --- MASTER DATA DROPDOWN VIEWS ---
+# Force reload
 
 class CustomerDropdownView(APIView):
     def get(self, request):

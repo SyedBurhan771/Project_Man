@@ -17,7 +17,7 @@ const parseSageDate = (dateStr) => {
   return `${year}-${month}-${day}`;
 };
 
-// Enrich projects with real data + Lifecycle Phases
+// Enrich projects with real data + Lifecycle Phases + createdAt
 export const projects = sageX3Projects.map((p) => {
   const allLines = p.tasks.flatMap((t) =>
     (t.budgets || []).flatMap((b) => b.lines || [])
@@ -73,6 +73,11 @@ export const projects = sageX3Projects.map((p) => {
     // ← THIS WAS MISSING — NOW ADDED
     phases: phases,
 
+    // ← NEW: createdAt for proper sorting (newest first)
+    createdAt: p.openDate 
+      ? parseSageDate(p.openDate) + 'T00:00:00Z' 
+      : '2025-01-01T00:00:00Z',
+
     subtasks: p.tasks.map((t, idx) => {
       const taskBudget = (t.budgets || []).reduce(
         (sum, b) => sum + (b.lines || []).reduce((l, line) => l + (line.amount || 0), 0),
@@ -110,6 +115,7 @@ const GET_PROJECTS = gql`
       durationDays
       teamSize
       progress
+      createdAt      
     }
   }
 `;
@@ -117,6 +123,7 @@ const GET_PROJECTS = gql`
 function Projects() {
   const navigate = useNavigate();
   const [newSageProjects, setNewSageProjects] = useState([]);
+  const [newAIProjects, setNewAIProjects] = useState([]);
   const [persistedSageProjects, setPersistedSageProjects] = useState([]);
 
   // ====================== Fetch AI Projects from DB ======================
@@ -135,6 +142,8 @@ function Projects() {
     subtasks: Array.from({ length: p.teamSize || 1 }, (_, i) => ({
       personResponsible: `Member ${i + 1}`,
     })),
+    // ← NEW: Use real createdAt from your database
+    createdAt: p.createdAt || '2025-01-01T00:00:00Z',
   }));
 
   useEffect(() => {
@@ -162,6 +171,8 @@ function Projects() {
             duration: 60,
             subtasks: [],
             source: 'soap-db',
+            // ← NEW: Use created_at if your backend returns it, otherwise old date
+            createdAt: p.created_at || p.createdAt || '2025-01-01T00:00:00Z',
           };
         });
 
@@ -192,6 +203,8 @@ function Projects() {
       duration: 60,
       subtasks: [],
       source: 'soap-ui',
+      // ← NEW: Set current timestamp so it appears at the TOP
+      createdAt: new Date().toISOString(),
     };
 
     setNewSageProjects((prev) => {
@@ -200,9 +213,42 @@ function Projects() {
     });
   };
 
-  const allProjects = [...newSageProjects, ...persistedSageProjects, ...projects, ...dbProjects].filter(
-    (project, index, arr) => arr.findIndex((p) => String(p.id) === String(project.id)) === index
-  );
+  const handleAIProjectCreated = (created) => {
+    const projectId = String(created?.project_id || '').trim();
+    const normalizedProject = {
+      id: projectId || `ai-${Date.now()}`,
+      name: created?.name || created?.description || 'New AI Project',
+      code: projectId ? `AI-${projectId}` : 'Pending ID',
+      category: created?.category || 'Finance / Development',
+      status: 'Open',
+      health: 'good',
+      progress: created?.progress || 0,
+      endDate: created?.dueDate ? created.dueDate.split('T')[0] : '—',
+      duration: created?.durationDays || 60,
+      subtasks: Array.from({ length: created?.teamSize || 1 }, (_, i) => ({
+        personResponsible: `Member ${i + 1}`,
+      })),
+      source: 'ai-ui',
+      createdAt: new Date().toISOString(),
+    };
+
+    setNewAIProjects((prev) => {
+      const withoutDuplicate = prev.filter((p) => p.id !== normalizedProject.id);
+      return [normalizedProject, ...withoutDuplicate];
+    });
+  };
+
+  // ====================== Combine ALL projects + SORT by createdAt (newest first) ======================
+  const allProjects = [...newAIProjects, ...newSageProjects, ...persistedSageProjects, ...projects, ...dbProjects]
+    .filter((project, index, arr) => 
+      arr.findIndex((p) => String(p.id) === String(project.id)) === index
+    )
+    .sort((a, b) => {
+      // Newest projects appear at the top (just like your PC file explorer)
+      const dateA = new Date(a.createdAt || '1970-01-01');
+      const dateB = new Date(b.createdAt || '1970-01-01');
+      return dateB - dateA;
+    });
 
   return (
     <div className="p-8">
@@ -214,6 +260,7 @@ function Projects() {
         <AICreateProject
           buttonText="New Project"
           onSageProjectCreated={handleSageProjectCreated}
+          onAIProjectCreated={handleAIProjectCreated}
         />
       </div>
 

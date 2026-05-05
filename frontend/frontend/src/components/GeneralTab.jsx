@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FileText, MapPin, Building2, ChevronDown, ChevronUp, Search, ChevronsUpDown } from 'lucide-react';
+import API_URL from '../config';
 
 function formatDateForView(dateValue) {
   if (!dateValue) return '-';
@@ -191,13 +192,76 @@ function SearchableDropdown({
   );
 }
 
+const PROJECT_TYPES = [
+  { code: '010',  label: 'Less than k\u20ac 10' },
+  { code: '020',  label: 'Less than k\u20ac 30' },
+  { code: '030',  label: 'Less than k\u20ac 60' },
+  { code: '040',  label: 'Higher than k\u20ac 60' },
+  { code: 'CAT1', label: 'Construction' },
+  { code: 'ETO',  label: 'Engineer-to-Order' },
+  { code: 'X',    label: 'To be defined' },
+];
+
+function ProjectTypeSelect({ value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const selected = PROJECT_TYPES.find((t) => t.code === value);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 flex items-center justify-between cursor-pointer"
+      >
+        <span className={selected ? 'text-gray-900 font-semibold' : 'text-gray-400'}>
+          {selected ? selected.code : '\u2014 Select Project Type \u2014'}
+        </span>
+        <ChevronsUpDown className="w-4 h-4 text-gray-400 flex-shrink-0" />
+      </button>
+      {open && (
+        <div className="absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-30 overflow-hidden">
+          <button
+            type="button"
+            onClick={() => { onChange(''); setOpen(false); }}
+            className="w-full text-left px-4 py-2 text-sm text-gray-400 hover:bg-gray-50 border-b border-gray-100"
+          >
+            \u2014 Select Project Type \u2014
+          </button>
+          {PROJECT_TYPES.map((t) => (
+            <button
+              key={t.code}
+              type="button"
+              onClick={() => { onChange(t.code); setOpen(false); }}
+              className={`w-full text-left px-4 py-2 text-sm hover:bg-indigo-50 flex items-center ${
+                value === t.code ? 'bg-indigo-50 font-semibold text-indigo-700' : 'text-gray-800'
+              }`}
+            >
+              <span className="font-mono font-bold w-14">{t.code}</span>
+              <span className="text-gray-500 text-xs pl-2">{t.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function GeneralTab({ project }) {
   const navigate = useNavigate();
   if (!project) return null;
 
   const sx = project.sageX3 || {};
   const isDraft = Boolean(project.sageDraft);
-  const BACKEND_URL = 'http://127.0.0.1:8000';
 
   const [showProjectHeader, setShowProjectHeader] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -206,6 +270,17 @@ function GeneralTab({ project }) {
   const [sites, setSites] = useState([]);
   const [masterDataError, setMasterDataError] = useState('');
   const [isMasterDataLoading, setIsMasterDataLoading] = useState(true);
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [modifyForm, setModifyForm] = useState({
+    salesSite: '',
+    operatingSite: '',
+    customerBP: '',
+    salesRep: '',
+    projectType: '',
+    description: '',
+  });
+
   const [draftForm, setDraftForm] = useState({
     projectNumber: '',
     salesSite: '',
@@ -222,11 +297,72 @@ function GeneralTab({ project }) {
 
   const mandatoryMissing =
     !String(draftForm.salesSite || '').trim() ||
-    !String(draftForm.currency || '').trim() ||
     !String(draftForm.description || '').trim();
 
   useEffect(() => {
-    if (!isDraft) return;
+    if (isEditing) {
+      setModifyForm({
+        salesSite: sx.salesSite || '',
+        operatingSite: sx.operatingSite || '',
+        customerBP: sx.customerBP || '',
+        salesRep: sx.salesRep || '',
+        projectType: sx.projectType || '',
+        description: sx.projectName || project.name || '',
+      });
+    }
+  }, [isEditing, sx, project.name]);
+
+  const submitModifyToSage = async () => {
+    if (!isAllowedCode(modifyForm.salesSite, sites)) {
+      setStatusMessage({ type: 'error', text: 'Please choose a valid Sales Site code from the dropdown list.' });
+      return;
+    }
+    if (modifyForm.customerBP && !isAllowedCode(modifyForm.customerBP, customers)) {
+      setStatusMessage({ type: 'error', text: 'Please choose a valid Customer BP code from the dropdown list.' });
+      return;
+    }
+
+    setIsSubmitting(true);
+    setStatusMessage(null);
+
+    try {
+      const projectId = sx.project_id || project.id;
+      const payload = { 
+        ...modifyForm,
+        project_id: projectId
+      };
+
+      const response = await fetch(`${API_URL}/api/soap/projects/${encodeURIComponent(projectId)}/`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await response.json().catch(() => ({}));
+      if (response.ok && result.success) {
+        setStatusMessage({ type: 'success', text: `Project ${projectId} updated successfully in Sage X3.` });
+        setIsEditing(false);
+        Object.assign(project.sageX3, {
+          salesSite: payload.salesSite,
+          operatingSite: payload.operatingSite,
+          customerBP: payload.customerBP,
+          salesRep: payload.salesRep,
+          projectType: payload.projectType,
+          projectName: payload.description,
+        });
+        project.name = payload.description;
+      } else {
+        setStatusMessage({ type: 'error', text: result.error || 'Failed to update.' });
+      }
+    } catch (error) {
+      setStatusMessage({ type: 'error', text: `Error: ${error.message}` });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!isDraft && !isEditing) return;
 
     const cachedCustomers = localStorage.getItem('soap_customers_cache');
     const cachedSites = localStorage.getItem('soap_sites_cache');
@@ -248,7 +384,7 @@ function GeneralTab({ project }) {
       let lastError = null;
       for (const path of paths) {
         try {
-          const response = await fetch(`${BACKEND_URL}${path}`);
+          const response = await fetch(`${API_URL}${path}`);
           const payload = await response.json().catch(() => null);
           if (response.ok && Array.isArray(payload)) return payload;
           lastError = new Error(`${errMessage} (${path})`);
@@ -285,7 +421,7 @@ function GeneralTab({ project }) {
     };
 
     fetchMasterData();
-  }, [BACKEND_URL, isDraft]);
+  }, [isDraft, isEditing]);
 
   const isAllowedCode = (value, options) =>
     options.some((item) => String(item.id || '').toLowerCase() === String(value || '').trim().toLowerCase());
@@ -293,25 +429,25 @@ function GeneralTab({ project }) {
   useEffect(() => {
     if (!isDraft) return;
     setDraftForm({
-      projectNumber: sx.projectNum || '',
+      projectNumber: sx.project_id || sx.projectNum || '',
       salesSite: sx.salesSite || '',
       operatingSite: sx.operatingSite || '',
-      customerBP: sx.customerBP || '',
-      salesRep: sx.salesRep || '',
-      currency: sx.currency || 'EUR',
+      //customerBP: sx.customerBP || '',
+      //salesRep: sx.salesRep || '',
+     // currency: sx.currency || 'EUR',
       rateType: sx.rateType || '',
       projectType: sx.projectType || '',
       contactRelation: sx.contactRelation || '',
       openDate: sx.openDate || '',
-      description: sx.projectName || project.name || '',
+      description: sx.projectName || project.description || project.name || '',
     });
-  }, [isDraft, project.id, project.name, sx]);
+  }, [isDraft, project.id, project.name, project.description, sx]);
 
   const submitDraftToSage = async () => {
-    if (mandatoryMissing) {
-      setStatusMessage({ type: 'error', text: 'Sales Site, Description and Currency are required.' });
-      return;
-    }
+    // if (mandatoryMissing) {
+    //   setStatusMessage({ type: 'error', text: 'Sales Site, Description and Currency are required.' });
+    //   return;
+    // }
     if (!isAllowedCode(draftForm.salesSite, sites)) {
       setStatusMessage({ type: 'error', text: 'Please choose a valid Sales Site code from the dropdown list.' });
       return;
@@ -330,7 +466,7 @@ function GeneralTab({ project }) {
     setStatusMessage(null);
 
     try {
-      const response = await fetch(`${BACKEND_URL}/api/soap/projects/`, {
+      const response = await fetch(`${API_URL}/api/soap/projects/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -391,7 +527,7 @@ function GeneralTab({ project }) {
         <span className="text-sm font-semibold text-indigo-700">Sage X3 - Project General Tab</span>
       </div>
 
-      {isDraft && (
+      {(isDraft || isEditing || statusMessage) && (
         <div
           className={`px-4 py-3 rounded-lg border text-sm ${
             statusMessage?.type === 'error'
@@ -401,15 +537,15 @@ function GeneralTab({ project }) {
               : 'bg-blue-50 border-blue-200 text-blue-700'
           }`}
         >
-          {statusMessage?.text || 'Fill the fields below, then create the project in Sage X3.'}
+          {statusMessage?.text || (isEditing ? 'Modify the fields below, then click Save Changes.' : 'Fill the fields below, then create the project in Sage X3.')}
         </div>
       )}
-      {isDraft && isMasterDataLoading && (
+      {(isDraft || isEditing) && isMasterDataLoading && (
         <div className="px-4 py-3 rounded-lg border text-sm bg-blue-50 border-blue-200 text-blue-700">
           Loading customers and sites...
         </div>
       )}
-      {isDraft && masterDataError && (
+      {(isDraft || isEditing) && masterDataError && (
         <div className="px-4 py-3 rounded-lg border text-sm bg-amber-50 border-amber-200 text-amber-700">
           {masterDataError}
         </div>
@@ -424,6 +560,14 @@ function GeneralTab({ project }) {
             <div className="flex items-center gap-3">
               <FileText className="w-6 h-6" />
               <span className="font-bold text-xl">{sx.projectName || project.name || 'Unnamed Project'}</span>
+              {!isDraft && !isEditing && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setIsEditing(true); setStatusMessage(null); }}
+                  className="ml-4 px-3 py-1 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-md text-sm font-medium text-white transition-all flex items-center gap-1"
+                >
+                  Edit Project
+                </button>
+              )}
             </div>
             {showProjectHeader ? <ChevronUp className="w-6 h-6" /> : <ChevronDown className="w-6 h-6" />}
           </div>
@@ -434,11 +578,11 @@ function GeneralTab({ project }) {
           <div className="bg-white border border-gray-200 border-t-0 rounded-b-2xl p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="col-span-2">
-                <Field label="PROJECT NUMBER">
+                <Field label="PROJECT ID">
                   {isDraft ? (
                     <ReadValue value="Auto-generated by Sage X3" />
                   ) : (
-                    <ReadValue value={sx.projectNum} />
+                    <ReadValue value={sx.project_id || sx.projectNum} />
                   )}
                 </Field>
               </div>
@@ -456,22 +600,33 @@ function GeneralTab({ project }) {
                     loading={isMasterDataLoading}
                     showLabel={false}
                   />
+                ) : isEditing ? (
+                  <SearchableDropdown
+                    label="Sales Site"
+                    value={modifyForm.salesSite}
+                    onChange={(selectedValue) => setModifyForm((prev) => ({ ...prev, salesSite: selectedValue }))}
+                    options={sites}
+                    placeholder="Search site code..."
+                    required
+                    disabled={isMasterDataLoading}
+                    loading={isMasterDataLoading}
+                    showLabel={false}
+                  />
                 ) : (
                   <ReadValue icon={MapPin} value={sx.salesSite} />
                 )}
               </Field>
 
-              <Field label="OPERATING SITE">
-                {isDraft ? (
-                  <EditInput
-                    value={draftForm.operatingSite}
-                    onChange={(e) => setDraftForm((prev) => ({ ...prev, operatingSite: e.target.value }))}
-                    placeholder="Optional"
-                  />
+              {/* <Field label="OPERATING SITE">
+                {isDraft || isEditing ? (
+                  <div className="px-4 py-3 bg-gray-100 border border-gray-200 border-dashed rounded-xl text-sm flex items-center gap-2">
+                    <Building2 className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    <span className="text-gray-400 italic">Sage X3 will populate this automatically</span>
+                  </div>
                 ) : (
                   <ReadValue icon={Building2} value={sx.operatingSite || 'OP-MAD-01'} />
                 )}
-              </Field>
+              </Field> */}
 
               <Field label="CUSTOMER BP">
                 {isDraft ? (
@@ -486,24 +641,42 @@ function GeneralTab({ project }) {
                     loading={isMasterDataLoading}
                     showLabel={false}
                   />
+                ) : isEditing ? (
+                  <SearchableDropdown
+                    label="Customer BP"
+                    value={modifyForm.customerBP}
+                    onChange={(selectedValue) => setModifyForm((prev) => ({ ...prev, customerBP: selectedValue }))}
+                    options={customers}
+                    placeholder="Search customer code..."
+                    required
+                    disabled={isMasterDataLoading}
+                    loading={isMasterDataLoading}
+                    showLabel={false}
+                  />
                 ) : (
                   <ReadValue value={sx.customerBP} />
                 )}
               </Field>
 
-              <Field label="SALES REP">
+              {/* <Field label="SALES REP">
                 {isDraft ? (
                   <EditInput
                     value={draftForm.salesRep}
                     onChange={(e) => setDraftForm((prev) => ({ ...prev, salesRep: e.target.value }))}
                     placeholder="Optional"
                   />
+                ) : isEditing ? (
+                  <EditInput
+                    value={modifyForm.salesRep}
+                    onChange={(e) => setModifyForm((prev) => ({ ...prev, salesRep: e.target.value }))}
+                    placeholder="Optional"
+                  />
                 ) : (
                   <ReadValue value={sx.salesRep} />
                 )}
-              </Field>
+              </Field> */}
 
-              <Field label="CURRENCY" required>
+              {/* <Field label="CURRENCY" required>
                 {isDraft ? (
                   <EditInput
                     value={draftForm.currency}
@@ -513,9 +686,9 @@ function GeneralTab({ project }) {
                 ) : (
                   <ReadValue value={sx.currency} />
                 )}
-              </Field>
+              </Field> */}
 
-              <Field label="RATE TYPE">
+              {/* <Field label="RATE TYPE">
                 {isDraft ? (
                   <EditInput
                     value={draftForm.rateType}
@@ -525,21 +698,25 @@ function GeneralTab({ project }) {
                 ) : (
                   <ReadValue value={sx.rateType === '1' ? 'Standard' : sx.rateType} />
                 )}
-              </Field>
+              </Field> */}
 
               <Field label="PROJECT TYPE">
                 {isDraft ? (
-                  <EditInput
+                  <ProjectTypeSelect
                     value={draftForm.projectType}
-                    onChange={(e) => setDraftForm((prev) => ({ ...prev, projectType: e.target.value }))}
-                    placeholder="Optional"
+                    onChange={(v) => setDraftForm((prev) => ({ ...prev, projectType: v }))}
+                  />
+                ) : isEditing ? (
+                  <ProjectTypeSelect
+                    value={modifyForm.projectType}
+                    onChange={(v) => setModifyForm((prev) => ({ ...prev, projectType: v }))}
                   />
                 ) : (
-                  <ReadValue value={sx.projectType} />
+                  <ReadValue value={sx.projectType || null} />
                 )}
               </Field>
 
-              <Field label="CONTACT RELATION">
+              {/* <Field label="CONTACT RELATION">
                 {isDraft ? (
                   <EditInput
                     value={draftForm.contactRelation}
@@ -549,9 +726,9 @@ function GeneralTab({ project }) {
                 ) : (
                   <ReadValue value={sx.contactRelation} />
                 )}
-              </Field>
+              </Field> */}
 
-              <Field label="OPEN DATE">
+              {/* <Field label="OPEN DATE">
                 {isDraft ? (
                   <EditInput
                     type="date"
@@ -561,7 +738,7 @@ function GeneralTab({ project }) {
                 ) : (
                   <ReadValue value={formatDateForView(sx.openDate)} />
                 )}
-              </Field>
+              </Field> */}
 
               <Field label="STATUS">
                 <ReadValue value="New" />
@@ -573,6 +750,14 @@ function GeneralTab({ project }) {
                     <textarea
                       value={draftForm.description}
                       onChange={(e) => setDraftForm((prev) => ({ ...prev, description: e.target.value }))}
+                      placeholder="Services project details"
+                      rows={4}
+                      className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  ) : isEditing ? (
+                    <textarea
+                      value={modifyForm.description}
+                      onChange={(e) => setModifyForm((prev) => ({ ...prev, description: e.target.value }))}
                       placeholder="Services project details"
                       rows={4}
                       className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -594,6 +779,26 @@ function GeneralTab({ project }) {
                     className="w-full md:w-auto px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-medium hover:from-green-700 hover:to-emerald-700 disabled:opacity-60"
                   >
                     {isSubmitting ? 'Creating...' : 'Create New Sage Project'}
+                  </button>
+                </div>
+              )}
+              {isEditing && (
+                <div className="col-span-2 flex gap-4">
+                  <button
+                    type="button"
+                    onClick={submitModifyToSage}
+                    disabled={isSubmitting || !modifyForm.salesSite || !modifyForm.description}
+                    className="w-full md:w-auto px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-medium hover:from-amber-600 hover:to-orange-600 disabled:opacity-60"
+                  >
+                    {isSubmitting ? 'Updating...' : 'Save Changes'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setIsEditing(false); setStatusMessage(null); }}
+                    disabled={isSubmitting}
+                    className="w-full md:w-auto px-6 py-3 bg-gray-200 text-gray-800 rounded-xl font-medium hover:bg-gray-300 disabled:opacity-60"
+                  >
+                    Cancel
                   </button>
                 </div>
               )}

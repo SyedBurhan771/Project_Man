@@ -21,17 +21,17 @@
             <![CDATA[{
                "PJM0_1": {
                   "OPPNUM": "{project_id}",
-                  "SALFCY": "{site}",
-                  "OPEDEFFCY": "{site}",
+                  "SALFCY": "{salesSite}",
+                  "OPEDEFFCY": "{salesSite}",
                   "PIMDESAXX": "{description}",
-                  "PIMDESAX1": "{short_desc}"
+                  "PIMDESAX1": "{description}"
                },
                "PJM1_1": {
-                  "OPPCMP": "{customer}",
-                  "OPPREP": "{sales_rep}"
+                  "OPPCMP": "{customerBp}",
+                  "OPPREP": "{salesRep}"
                },
                "PJM1_2": {
-                  "OPPTYP": "{category}"
+                  "OPPTYP": "{projectType}"
                }
             }]]>
          </objectXml>

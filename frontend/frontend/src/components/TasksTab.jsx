@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { 
   Brain, 
   Link as LinkIcon, 
@@ -29,7 +29,8 @@ import {
   TrendingUp,
   Hash,
   AlertCircle,
-  Package
+  Package,
+  ChevronsUpDown
 } from 'lucide-react';
 import API_URL from '../config';
 import { gql } from "@apollo/client";
@@ -99,11 +100,26 @@ function formatDisplayDateTime(dateStr, timeStr) {
   }
 }
 
-/** Parse DDMMYY → readable */
+/** Parse DDMMYY, YYYY-MM-DD, or MM/DD/YY → readable */
 function parseSageDate(raw) {
-  if (!raw || raw.length < 6) return '—';
-  const d = raw.slice(0, 2), m = raw.slice(2, 4), y = raw.slice(4, 6);
-  return `${d}/${m}/20${y}`;
+  if (!raw) return '—';
+  if (raw.includes('/')) {
+    const parts = raw.split('/');
+    if (parts.length === 3 && parts[2].length === 2) {
+      // MM/DD/YY -> DD/MM/20YY
+      return `${parts[1]}/${parts[0]}/20${parts[2]}`;
+    }
+    return raw;
+  }
+  if (raw.includes('-')) {
+    const [y, m, d] = raw.split('-');
+    return `${d}/${m}/${y}`;
+  }
+  if (raw.length >= 6 && !raw.includes('/')) {
+    const d = raw.slice(0, 2), m = raw.slice(2, 4), y = raw.slice(4, 6);
+    return `${d}/${m}/20${y}`;
+  }
+  return raw;
 }
 
 function statusLabel(code) {
@@ -518,61 +534,114 @@ function SageTaskCard({ task }) {
   );
 }
 
+// ====================== TASK CATEGORY DROPDOWN ======================
+const TASK_CATEGORIES = [
+  { code: 'MAT',      label: 'Material' },
+  { code: 'MATERIAL', label: 'Material' },
+  { code: 'MISC',     label: 'Miscellaneous' },
+  { code: 'MIXED',    label: 'Mixed' },
+  { code: 'PHASE',    label: 'Phase' },
+  { code: 'PROJECT',  label: 'Project follow-up' },
+  { code: 'QA',       label: 'Quality' },
+];
+
+function TaskCategorySelect({ value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const selected = TASK_CATEGORIES.find((t) => t.code === value);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="w-full border-2 border-gray-200 focus:border-indigo-500 rounded-xl px-4 py-2.5 text-sm font-semibold focus:outline-none transition-colors bg-white flex items-center justify-between cursor-pointer"
+      >
+        <span className={selected ? 'text-gray-900' : 'text-gray-400 font-normal'}>
+          {selected ? selected.code : 'Select category…'}
+        </span>
+        <ChevronsUpDown className="w-4 h-4 text-gray-400 flex-shrink-0" />
+      </button>
+      {open && (
+        <div className="absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-30 overflow-hidden">
+          <button
+            type="button"
+            onClick={() => { onChange(''); setOpen(false); }}
+            className="w-full text-left px-4 py-2 text-sm text-gray-400 hover:bg-gray-50 border-b border-gray-100"
+          >
+            — Select category —
+          </button>
+          {TASK_CATEGORIES.map((t) => (
+            <button
+              key={t.code}
+              type="button"
+              onClick={() => { onChange(t.code); setOpen(false); }}
+              className={`w-full text-left px-4 py-2 text-sm hover:bg-indigo-50 flex items-center ${
+                value === t.code ? 'bg-indigo-50 font-semibold text-indigo-700' : 'text-gray-800'
+              }`}
+            >
+              <span className="font-mono font-bold w-20">{t.code}</span>
+              <span className="text-gray-500 text-xs pl-2">{t.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ====================== CREATE TASK FORM ======================
 function CreateTaskForm({ project, onSuccess, onCancel }) {
-  const [taskCode, setTaskCode] = useState('');
-  const [category, setCategory] = useState('LABOR');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [personResponsible, setPersonResponsible] = useState('');
-  const [budgetLink, setBudgetLink] = useState('B00');
+  const [tascod, setTascod] = useState('T-');
+  const [tcacod, setTcacod] = useState('');
+  const [tasfcy, setTasfcy] = useState(project?.sageX3?.salesSite || project?.sageX3?.site || project?.salesSite || project?.site || '');
+  const [tasdesaxx, setTasdesaxx] = useState('');
+  const [tasdesax1, setTasdesax1] = useState('');
+  const [tasstartdt, setTasstartdt] = useState('');
+  const [tasenddt, setTasenddt] = useState('');
+  const [tasdur, setTasdur] = useState('1');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Budget lines state
-  const [lines, setLines] = useState([
-    { costType: 'WORKER', description: '', amount: '', currency: 'EUR', quantity: '0' }
-  ]);
-
-  const addLine = () => setLines(prev => [...prev, { costType: 'WORKER', description: '', amount: '', currency: 'EUR', quantity: '0' }]);
-  const removeLine = (idx) => setLines(prev => prev.filter((_, i) => i !== idx));
-  const updateLine = (idx, field, val) => setLines(prev => prev.map((l, i) => i === idx ? { ...l, [field]: val } : l));
-
   const handleSubmit = async () => {
-    if (!taskCode.trim()) return alert("Task Code is required");
+    const trimmedCode = tascod.trim();
+    if (!trimmedCode) return alert("Task Code is required");
+    if (!trimmedCode.startsWith('T-')) return alert("Task Code must start with 'T-' (e.g., T-01)");
+
+    // Ensure all fields are filled
+    if (!tcacod || !tasfcy || !tasdesaxx || !tasdesax1 || !tasstartdt || !tasenddt || !tasdur) {
+      return alert("All fields are required. Please fill in Category, Descriptions, Dates, and Duration.");
+    }
+
     setIsSubmitting(true);
     try {
       const payload = {
-        projectId: project.id,
-        taskCode: taskCode.trim(),
-        category,
-        startDate,
-        endDate,
-        personResponsible,
-        budgetLink,
-        budgets: [{
-          budgetCode: budgetLink,
-          status: '1',
-          startDate: '',
-          endDate: '',
-          progress: '0',
-          projectLink: '',
-          lines: lines.map(l => ({
-            costType: l.costType,
-            description: l.description,
-            amount: parseFloat(l.amount) || 0,
-            currency: l.currency,
-            quantity: parseFloat(l.quantity) || 0,
-          }))
-        }]
+        oppnum: project?.projectNum || project?.id || '',
+        tascod: tascod.trim(),
+        tcacod,
+        tasfcy,
+        tasdesaxx,
+        tasdesax1,
+        tasstartdt,
+        tasenddt,
+        tasdur,
       };
-      const response = await fetch(`${API_URL}/api/ai/create-sage-task/`, {
+      const response = await fetch(`${API_URL}/api/soap/tasks/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
       const result = await response.json();
       if (result.success) {
-        alert(`✅ Task "${taskCode}" created in Sage X3!`);
+        alert(`✅ Task "${tascod}" created successfully!`);
         onSuccess?.();
         onCancel();
       } else {
@@ -593,7 +662,7 @@ function CreateTaskForm({ project, onSuccess, onCancel }) {
           <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center">
             <span className="text-white text-xs font-black">X3</span>
           </div>
-          <h4 className="font-bold text-indigo-800 text-base">New Sage X3 Task</h4>
+          <h4 className="font-bold text-indigo-800 text-base">New Task</h4>
         </div>
         <button onClick={onCancel} className="text-gray-400 hover:text-red-500 transition-colors p-1 rounded-lg hover:bg-red-50">
           <X className="w-5 h-5" />
@@ -601,7 +670,6 @@ function CreateTaskForm({ project, onSuccess, onCancel }) {
       </div>
 
       <div className="p-6 space-y-5">
-        {/* Row 1: Task Code + Category */}
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5 flex items-center gap-1">
@@ -609,9 +677,9 @@ function CreateTaskForm({ project, onSuccess, onCancel }) {
             </label>
             <input
               type="text"
-              value={taskCode}
-              onChange={e => setTaskCode(e.target.value)}
-              placeholder="e.g. T01"
+              value={tascod}
+              onChange={e => setTascod(e.target.value)}
+              placeholder="e.g. T-01"
               className="w-full border-2 border-gray-200 focus:border-indigo-500 rounded-xl px-4 py-2.5 text-sm font-semibold focus:outline-none transition-colors"
             />
           </div>
@@ -619,29 +687,49 @@ function CreateTaskForm({ project, onSuccess, onCancel }) {
             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5 flex items-center gap-1">
               <Tag className="w-3.5 h-3.5" /> Category
             </label>
-            <select
-              value={category}
-              onChange={e => setCategory(e.target.value)}
-              className="w-full border-2 border-gray-200 focus:border-indigo-500 rounded-xl px-4 py-2.5 text-sm font-semibold focus:outline-none transition-colors bg-white"
-            >
-              <option value="LABOR">👷 LABOR</option>
-              <option value="MATERIAL">📦 MATERIAL</option>
-              <option value="EQUIPMENT">🔧 EQUIPMENT</option>
-              <option value="SERVICE">🛠️ SERVICE</option>
-            </select>
+            <TaskCategorySelect
+              value={tcacod}
+              onChange={setTcacod}
+            />
           </div>
         </div>
 
-        {/* Row 2: Start + End Date */}
         <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5 flex items-center gap-1">
+              <FileText className="w-3.5 h-3.5" /> Description
+            </label>
+            <input
+              type="text"
+              value={tasdesaxx}
+              onChange={e => setTasdesaxx(e.target.value)}
+              placeholder="Task Description"
+              className="w-full border-2 border-gray-200 focus:border-indigo-500 rounded-xl px-4 py-2.5 text-sm focus:outline-none transition-colors"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5 flex items-center gap-1">
+              <FileText className="w-3.5 h-3.5" /> Short Description
+            </label>
+            <input
+              type="text"
+              value={tasdesax1}
+              onChange={e => setTasdesax1(e.target.value)}
+              placeholder="Short Description"
+              className="w-full border-2 border-gray-200 focus:border-indigo-500 rounded-xl px-4 py-2.5 text-sm focus:outline-none transition-colors"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-4">
           <div>
             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5 flex items-center gap-1">
               <Calendar className="w-3.5 h-3.5" /> Start Date
             </label>
             <input
               type="date"
-              value={startDate}
-              onChange={e => setStartDate(e.target.value)}
+              value={tasstartdt}
+              onChange={e => setTasstartdt(e.target.value)}
               className="w-full border-2 border-gray-200 focus:border-indigo-500 rounded-xl px-4 py-2.5 text-sm focus:outline-none transition-colors"
             />
           </div>
@@ -651,127 +739,33 @@ function CreateTaskForm({ project, onSuccess, onCancel }) {
             </label>
             <input
               type="date"
-              value={endDate}
-              onChange={e => setEndDate(e.target.value)}
+              value={tasenddt}
+              onChange={e => setTasenddt(e.target.value)}
+              className="w-full border-2 border-gray-200 focus:border-indigo-500 rounded-xl px-4 py-2.5 text-sm focus:outline-none transition-colors"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5 flex items-center gap-1">
+              <Timer className="w-3.5 h-3.5" /> Duration
+            </label>
+            <input
+              type="number"
+              value={tasdur}
+              onChange={e => setTasdur(e.target.value)}
               className="w-full border-2 border-gray-200 focus:border-indigo-500 rounded-xl px-4 py-2.5 text-sm focus:outline-none transition-colors"
             />
           </div>
         </div>
 
-        {/* Row 3: Person Responsible + Budget Link */}
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5 flex items-center gap-1">
-              <User className="w-3.5 h-3.5" /> Person Responsible
+              <Briefcase className="w-3.5 h-3.5" /> Task Site (FCY)
             </label>
-            <input
-              type="text"
-              value={personResponsible}
-              onChange={e => setPersonResponsible(e.target.value)}
-              placeholder="e.g. John Doe"
-              className="w-full border-2 border-gray-200 focus:border-indigo-500 rounded-xl px-4 py-2.5 text-sm focus:outline-none transition-colors"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5 flex items-center gap-1">
-              <Link2 className="w-3.5 h-3.5" /> Budget Link
-            </label>
-            <input
-              type="text"
-              value={budgetLink}
-              onChange={e => setBudgetLink(e.target.value)}
-              placeholder="e.g. B00"
-              className="w-full border-2 border-gray-200 focus:border-indigo-500 rounded-xl px-4 py-2.5 text-sm font-semibold focus:outline-none transition-colors"
-            />
-          </div>
-        </div>
-
-        {/* Budget Lines */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <label className="text-xs font-bold text-gray-500 uppercase tracking-wide flex items-center gap-1">
-              <Layers className="w-3.5 h-3.5" /> Budget Lines
-            </label>
-            <button
-              onClick={addLine}
-              className="flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-800 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 rounded-xl transition-colors"
-            >
-              <Plus className="w-3.5 h-3.5" /> Add Line
-            </button>
-          </div>
-
-          <div className="space-y-3">
-            {lines.map((line, idx) => (
-              <div key={idx} className="bg-slate-50 border border-slate-200 rounded-xl p-4 relative">
-                <button
-                  onClick={() => removeLine(idx)}
-                  className="absolute top-3 right-3 text-gray-300 hover:text-red-400 transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-                <div className="grid grid-cols-2 gap-3 pr-6">
-                  <div>
-                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Cost Type</label>
-                    <select
-                      value={line.costType}
-                      onChange={e => updateLine(idx, 'costType', e.target.value)}
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs font-semibold bg-white focus:outline-none focus:border-indigo-400"
-                    >
-                      <option>WORKER</option>
-                      <option>MANAGER</option>
-                      <option>MATERIAL</option>
-                      <option>EQUIPMENT</option>
-                      <option>OVERHEAD</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Description</label>
-                    <input
-                      type="text"
-                      value={line.description}
-                      onChange={e => updateLine(idx, 'description', e.target.value)}
-                      placeholder="e.g. Operator time"
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-indigo-400"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Amount</label>
-                    <input
-                      type="number"
-                      value={line.amount}
-                      onChange={e => updateLine(idx, 'amount', e.target.value)}
-                      placeholder="0.00"
-                      step="0.01"
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs font-semibold focus:outline-none focus:border-indigo-400"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Currency</label>
-                      <select
-                        value={line.currency}
-                        onChange={e => updateLine(idx, 'currency', e.target.value)}
-                        className="w-full border border-gray-200 rounded-lg px-2 py-2 text-xs font-bold bg-white focus:outline-none focus:border-indigo-400"
-                      >
-                        <option>EUR</option>
-                        <option>USD</option>
-                        <option>GBP</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Quantity</label>
-                      <input
-                        type="number"
-                        value={line.quantity}
-                        onChange={e => updateLine(idx, 'quantity', e.target.value)}
-                        step="0.1"
-                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs font-semibold focus:outline-none focus:border-indigo-400"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
+            <div className="w-full border-2 border-gray-100 bg-gray-50 rounded-xl px-4 py-2.5 text-sm flex items-center justify-between">
+              <span className="font-semibold text-gray-700">{tasfcy || '—'}</span>
+              <span className="text-[10px] text-gray-400 italic ml-2">Auto-filled from project</span>
+            </div>
           </div>
         </div>
 
@@ -779,7 +773,7 @@ function CreateTaskForm({ project, onSuccess, onCancel }) {
         <div className="pt-2 flex items-center gap-3">
           <button
             onClick={handleSubmit}
-            disabled={isSubmitting || !taskCode.trim()}
+            disabled={isSubmitting || !tascod.trim()}
             className="flex-1 flex items-center justify-center gap-2 px-6 py-3.5 bg-green-600 hover:bg-green-700 text-white font-bold text-sm rounded-xl transition-all active:scale-95 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSubmitting ? (
@@ -808,7 +802,8 @@ function TasksTab({ project, onAssignmentsChange }) {
   const [newTaskDesc, setNewTaskDesc]           = useState('');
   const [aiTasks, setAiTasks]                   = useState([]);
   const [isGenerating, setIsGenerating]         = useState(false);
-  const [isCreating, setIsCreating]             = useState(false);
+  const [creatingTaskTitle, setCreatingTaskTitle] = useState(null);
+  const [createdAiTasks, setCreatedAiTasks]     = useState(new Set());
   const [expandedParents, setExpandedParents]   = useState({});
   const [logModalTask, setLogModalTask]         = useState(null);
   const [taskAssignments, setTaskAssignments]   = useState({});
@@ -816,34 +811,57 @@ function TasksTab({ project, onAssignmentsChange }) {
   const [editTitle, setEditTitle]               = useState('');
   const [addSubtaskFor, setAddSubtaskFor]       = useState(null);
   const [showTaskHeader, setShowTaskHeader]     = useState(true);
+  const [selectedAiIndices, setSelectedAiIndices] = useState(new Set());
+  const [isCreatingBatch, setIsCreatingBatch]   = useState(false);
 
   // NEW: control Create Task form visibility
   const [showCreateForm, setShowCreateForm]     = useState(false);
 
-  // Sample Sage X3 tasks — replace with real API data
-  const sageTasksSample = [
-    {
-      taskCode: 'T01', status: '1', category: 'LABOR',
-      startDate: '010322', endDate: '010422', progress: '0',
-      systemId: 'TAS000000000632', budgetLink: 'B00', personResponsible: '',
-      budgets: [{
-        budgetCode: 'B00', status: '1', startDate: '', endDate: '', progress: '0', projectLink: '',
-        lines: [
-          { amount: 355.53, currency: 'EUR', costType: 'WORKER', quantity: 0.0, description: 'Tiempo de operario' },
-          { amount: 256.5,  currency: 'EUR', costType: 'MANAGER', quantity: 0.0, description: 'Jefatura de proyecto' },
-        ]
-      }]
+  const [sageTasks, setSageTasks]               = useState([]);
+  const [loadingSageTasks, setLoadingSageTasks] = useState(false);
+
+  const fetchSageTasks = async () => {
+    const oppnum = project?.projectNum || project?.id;
+    if (!oppnum) return;
+    setLoadingSageTasks(true);
+    try {
+      const response = await fetch(`${API_URL}/api/soap/tasks/?oppnum=${oppnum}`);
+      const result = await response.json();
+      if (result.success && result.tasks) {
+        setSageTasks(result.tasks);
+      }
+    } catch (err) {
+      console.error("Error fetching sage tasks:", err);
+    } finally {
+      setLoadingSageTasks(false);
     }
-  ];
+  };
+
+  React.useEffect(() => {
+    fetchSageTasks();
+  }, [project?.projectNum, project?.id]);
 
   const { data, loading, error, refetch: refetchTasks } = useQuery(GET_ALL_TASKS, { fetchPolicy: 'cache-and-network' });
 
   const groupedTasks = useMemo(() => {
-    if (!data?.allTasks || !project?.id) return [];
-    if (project.subtasks && project.subtasks.length > 0) {
-      return project.subtasks.filter(t => t.id != null).map((t, idx) => normalizeTask(t, idx)).filter(t => !t.parentId);
+    if (!project?.id) return [];
+    
+    // Always use data.allTasks for real projects (not drafts) so we see new tasks immediately
+    if (data?.allTasks && !String(project.id).startsWith('draft')) {
+      return data.allTasks
+        .filter(t => t.id != null && String(t.project?.id) === String(project.id) && !t.parent?.id)
+        .map((t, idx) => normalizeTask(t, idx));
     }
-    return data.allTasks.filter(t => t.id != null && String(t.project?.id) === String(project.id) && !t.parent?.id).map((t, idx) => normalizeTask(t, idx));
+    
+    // Fallback to project.subtasks for drafts or if allTasks is missing
+    if (project.subtasks && project.subtasks.length > 0) {
+      return project.subtasks
+        .filter(t => t.id != null)
+        .map((t, idx) => normalizeTask(t, idx))
+        .filter(t => !t.parentId);
+    }
+    
+    return [];
   }, [data, project]);
 
   const rootTaskList = groupedTasks;
@@ -888,7 +906,8 @@ function TasksTab({ project, onAssignmentsChange }) {
 
   const handleGenerateTasks = async () => {
     if (!project?.id) return;
-    setIsGenerating(true); setAiTasks([]);
+    setIsGenerating(true); setAiTasks([]); setCreatedAiTasks(new Set());
+    setSelectedAiIndices(new Set());
     try {
       const response = await fetch(`${API_URL}/api/ai/generate-tasks/`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -901,8 +920,8 @@ function TasksTab({ project, onAssignmentsChange }) {
     finally { setIsGenerating(false); }
   };
 
-  const handleCreateTask = async (task) => {
-    setIsCreating(true);
+  const handleCreateTask = async (task, suppressAlert = false) => {
+    if (!suppressAlert) setCreatingTaskTitle(task.title);
     try {
       const response = await fetch(`${API_URL}/api/ai/create-task/`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -913,10 +932,64 @@ function TasksTab({ project, onAssignmentsChange }) {
         })
       });
       const result = await response.json();
-      if (result.success) { alert(`✅ Task "${task.title}" created successfully!`); refetchTasks(); }
-      else alert('Failed: ' + (result.error || 'Unknown error'));
-    } catch (err) { alert('Error: ' + err.message); }
-    finally { setIsCreating(false); }
+      if (result.success) { 
+        if (!suppressAlert) alert(`✅ Task "${task.title}" created successfully!`); 
+        setCreatedAiTasks(prev => new Set([...prev, task.title]));
+        return true;
+      }
+      else {
+        if (!suppressAlert) alert('Failed: ' + (result.error || 'Unknown error'));
+        return false;
+      }
+    } catch (err) { 
+      if (!suppressAlert) alert('Error: ' + err.message);
+      return false;
+    }
+    finally { if (!suppressAlert) setCreatingTaskTitle(null); }
+  };
+
+  const toggleTaskSelection = (index) => {
+    setSelectedAiIndices(prev => {
+      const next = new Set(prev);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedAiIndices.size === aiTasks.length) {
+      setSelectedAiIndices(new Set());
+    } else {
+      const all = new Set();
+      aiTasks.forEach((_, idx) => {
+        if (!createdAiTasks.has(aiTasks[idx].title)) {
+          all.add(idx);
+        }
+      });
+      setSelectedAiIndices(all);
+    }
+  };
+
+  const handleCreateSelectedTasks = async () => {
+    const selectedTasks = aiTasks.filter((_, idx) => selectedAiIndices.has(idx));
+    if (selectedTasks.length === 0) return;
+
+    setIsCreatingBatch(true);
+    let successCount = 0;
+    
+    for (const task of selectedTasks) {
+      if (createdAiTasks.has(task.title)) continue;
+      const ok = await handleCreateTask(task, true);
+      if (ok) successCount++;
+    }
+
+    if (successCount > 0) {
+      alert(`✅ Created ${successCount} tasks successfully!`);
+      refetchTasks();
+    }
+    setSelectedAiIndices(new Set());
+    setIsCreatingBatch(false);
   };
 
   // ====================== RENDER A SINGLE TASK CARD ======================
@@ -1083,12 +1156,12 @@ function TasksTab({ project, onAssignmentsChange }) {
               </button>
 
               {/* Modify button */}
-              <button
+              {/* <button
                 className="flex items-center gap-2 px-5 py-2 rounded-xl font-semibold text-sm bg-white/15 hover:bg-white/25 text-white border border-white/30 transition-all active:scale-95"
               >
                 <Settings className="w-4 h-4" />
                 Modify
-              </button>
+              </button> */}
 
               {/* Chevron toggle */}
               <div
@@ -1105,7 +1178,7 @@ function TasksTab({ project, onAssignmentsChange }) {
             <div className="border-l border-r border-indigo-200 bg-indigo-50/30 px-6 py-1">
               <CreateTaskForm
                 project={project}
-                onSuccess={() => refetchTasks()}
+                onSuccess={() => { refetchTasks(); fetchSageTasks(); }}
                 onCancel={() => setShowCreateForm(false)}
               />
             </div>
@@ -1114,89 +1187,73 @@ function TasksTab({ project, onAssignmentsChange }) {
           {/* Task Detail Body */}
           {showTaskHeader && (
             <div className="bg-white border border-gray-200 border-t-0 rounded-b-2xl p-6">
-              {/* Sage X3 Task Fields */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
-                <div>
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">Task Code</label>
-                  <div className="flex items-center gap-2 px-4 py-3 bg-indigo-50 border border-indigo-200 rounded-xl">
-                    <Hash className="w-4 h-4 text-indigo-500" />
-                    <span className="font-bold text-indigo-800 text-sm">{sageTasksSample[0]?.taskCode || '—'}</span>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">Status</label>
-                  <div className={`px-4 py-3 rounded-xl border text-sm font-bold ${statusColor(sageTasksSample[0]?.status)}`}>
-                    {statusLabel(sageTasksSample[0]?.status)}
-                  </div>
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">Category</label>
-                  <div className="flex items-center gap-2 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl text-sm font-semibold text-amber-700">
-                    <span>{categoryIcon(sageTasksSample[0]?.category)}</span>
-                    <span>{sageTasksSample[0]?.category || '—'}</span>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">Start Date</label>
-                  <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700">
-                    <Calendar className="w-4 h-4 text-gray-400" />
-                    {parseSageDate(sageTasksSample[0]?.startDate)}
-                  </div>
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">End Date</label>
-                  <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700">
-                    <Calendar className="w-4 h-4 text-gray-400" />
-                    {parseSageDate(sageTasksSample[0]?.endDate)}
-                  </div>
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">Progress</label>
-                  <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl">
-                    <div className="flex items-center gap-3">
-                      <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
-                        <div className="h-full bg-gradient-to-r from-indigo-500 to-violet-500" style={{ width: `${sageTasksSample[0]?.progress || 0}%` }} />
+              {loadingSageTasks ? (
+                <div className="text-center py-10 text-gray-400">Loading tasks...</div>
+              ) : sageTasks.length === 0 ? (
+                <div className="text-center py-10 text-gray-400">No tasks created yet</div>
+              ) : (
+                sageTasks.map((sageTask, taskIdx) => (
+                  <div key={sageTask.taskCode} className={taskIdx > 0 ? "mt-8 pt-8 border-t border-gray-200" : ""}>
+                    {/* Sage X3 Task Fields */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
+                      <div>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">Task Code</label>
+                        <div className="flex items-center gap-2 px-4 py-3 bg-indigo-50 border border-indigo-200 rounded-xl">
+                          <Hash className="w-4 h-4 text-indigo-500" />
+                          <span className="font-bold text-indigo-800 text-sm">{sageTask.taskCode || '—'}</span>
+                        </div>
                       </div>
-                      <span className="text-sm font-bold text-gray-700">{sageTasksSample[0]?.progress || 0}%</span>
+                      <div>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">Status</label>
+                        <div className={`px-4 py-3 rounded-xl border text-sm font-bold ${statusColor(sageTask.status)}`}>
+                          {statusLabel(sageTask.status)}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">Category</label>
+                        <div className="flex items-center gap-2 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl text-sm font-semibold text-amber-700">
+                          <span>{categoryIcon(sageTask.category)}</span>
+                          <span>{sageTask.category || '—'}</span>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">Start Date</label>
+                        <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700">
+                          <Calendar className="w-4 h-4 text-gray-400" />
+                          {parseSageDate(sageTask.startDate)}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">End Date</label>
+                        <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700">
+                          <Calendar className="w-4 h-4 text-gray-400" />
+                          {parseSageDate(sageTask.endDate)}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">Progress</label>
+                        <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl">
+                          <div className="flex items-center gap-3">
+                            <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                              <div className="h-full bg-gradient-to-r from-indigo-500 to-violet-500" style={{ width: `${sageTask.progress || 0}%` }} />
+                            </div>
+                            <span className="text-sm font-bold text-gray-700">{sageTask.progress || 0}%</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="col-span-1 md:col-span-3">
+                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block flex items-center gap-1.5">
+                          <FileText className="w-3.5 h-3.5 text-gray-400" />
+                          Description
+                        </label>
+                        <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 whitespace-pre-wrap min-h-[60px]">
+                          {sageTask.description || sageTask.shortDesc || <span className="text-gray-400 italic">No description provided</span>}
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">Budget Link</label>
-                  <div className="flex items-center gap-2 px-4 py-3 bg-indigo-50 border border-indigo-200 rounded-xl text-sm font-bold text-indigo-700">
-                    <Link2 className="w-4 h-4" />{sageTasksSample[0]?.budgetLink || '—'}
-                  </div>
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">Person Responsible</label>
-                  <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700">
-                    <User className="w-4 h-4 text-gray-400" />
-                    {sageTasksSample[0]?.personResponsible || <span className="text-gray-400 italic">Unassigned</span>}
-                  </div>
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">System ID</label>
-                  <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-xs font-mono text-gray-500 truncate">
-                    {sageTasksSample[0]?.systemId || '—'}
-                  </div>
-                </div>
-              </div>
-
-              {/* Budget Lines */}
-              <div>
-                <div className="flex items-center gap-2 mb-4">
-                  <Layers className="w-4 h-4 text-indigo-500" />
-                  <span className="text-sm font-bold text-gray-700 uppercase tracking-wide">Budget Lines</span>
-                  <div className="flex-1 h-px bg-indigo-100 ml-2" />
-                </div>
-                <div className="space-y-3">
-                  {sageTasksSample.map((task, ti) =>
-                    task.budgets?.map((budget, bi) => (
-                      <SageTaskCard key={`${ti}-${bi}`} task={{ ...task, budgets: [budget] }} />
-                    ))
-                  )}
-                </div>
-              </div>
+                ))
+              )}
             </div>
           )}
         </div>
@@ -1260,7 +1317,7 @@ function TasksTab({ project, onAssignmentsChange }) {
             </div>
           </div>
           <button
-            onClick={() => { setShowAISubtask(!showAISubtask); if (!showAISubtask) { setAiTasks([]); setNewTaskDesc(''); } }}
+            onClick={() => { setShowAISubtask(!showAISubtask); if (!showAISubtask) { setAiTasks([]); setNewTaskDesc(''); setCreatedAiTasks(new Set()); } }}
             className="px-6 py-2.5 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-2xl text-sm font-medium hover:brightness-105 transition flex items-center gap-2"
           >
             {showAISubtask ? 'Hide' : '✨ Generate Tasks with AI'}
@@ -1280,25 +1337,63 @@ function TasksTab({ project, onAssignmentsChange }) {
             </button>
             {aiTasks.length > 0 && (
               <div className="mt-8">
-                <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  AI Suggested Subtasks <span className="text-sm font-normal text-gray-500">({aiTasks.length})</span>
-                </h4>
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                    AI Suggested Subtasks <span className="text-sm font-normal text-gray-500">({aiTasks.length})</span>
+                  </h4>
+                  <div className="flex items-center gap-4">
+                    <button
+                      onClick={toggleSelectAll}
+                      className="text-sm font-medium text-indigo-600 hover:text-indigo-700 flex items-center gap-2"
+                    >
+                      <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${selectedAiIndices.size === aiTasks.length ? 'bg-indigo-600 border-indigo-600' : 'border-gray-300 bg-white'}`}>
+                        {selectedAiIndices.size === aiTasks.length && <Check className="w-3.5 h-3.5 text-white" />}
+                      </div>
+                      Select All
+                    </button>
+                    <button
+                      onClick={handleCreateSelectedTasks}
+                      disabled={selectedAiIndices.size === 0 || isCreatingBatch}
+                      className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-semibold disabled:opacity-50 transition shadow-sm flex items-center gap-2"
+                    >
+                      {isCreatingBatch ? (
+                        <><div className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Creating...</>
+                      ) : (
+                        <>Create Selected ({selectedAiIndices.size})</>
+                      )}
+                    </button>
+                  </div>
+                </div>
                 <div className="space-y-4 max-h-[420px] overflow-y-auto pr-2">
-                  {aiTasks.map((task, idx) => (
-                    <div key={`ai-task-${idx}`} className="bg-white border border-purple-200 rounded-2xl p-5 flex justify-between items-start gap-4">
-                      <div className="flex-1">
-                        <h5 className="font-semibold text-gray-900 text-lg">{task.title}</h5>
-                        {task.description && <p className="text-sm text-gray-600 mt-2 leading-relaxed">{task.description}</p>}
-                        <div className="mt-3 text-xs text-gray-500 flex gap-4">
-                          <span>{task.estimatedDays || 0} days</span>
-                          <span>{task.estimatedHours || (task.estimatedDays * 8)} hours</span>
+                  {aiTasks.map((task, idx) => {
+                    const isSelected = selectedAiIndices.has(idx);
+                    const isCreated = createdAiTasks.has(task.title);
+                    return (
+                      <div 
+                        key={`ai-task-${idx}`} 
+                        className={`bg-white border rounded-2xl p-5 flex items-start gap-4 transition-all ${isSelected ? 'border-indigo-400 bg-indigo-50/30' : 'border-purple-200'}`}
+                      >
+                        <button
+                          onClick={() => !isCreated && toggleTaskSelection(idx)}
+                          disabled={isCreated}
+                          className={`mt-1 w-6 h-6 rounded-lg border-2 flex items-center justify-center flex-shrink-0 transition-all ${isCreated ? 'bg-gray-100 border-gray-200' : isSelected ? 'bg-indigo-600 border-indigo-600' : 'border-gray-300 bg-white hover:border-indigo-400'}`}
+                        >
+                          {isCreated ? <CheckCircle2 className="w-4 h-4 text-emerald-500" /> : isSelected && <Check className="w-4 h-4 text-white" />}
+                        </button>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <h5 className="font-semibold text-gray-900 text-lg">{task.title}</h5>
+                            {isCreated && <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] font-bold rounded-full uppercase tracking-wider">Created</span>}
+                          </div>
+                          {task.description && <p className="text-sm text-gray-600 mt-2 leading-relaxed">{task.description}</p>}
+                          <div className="mt-3 text-xs text-gray-500 flex gap-4">
+                            <span>{task.estimatedDays || 0} days</span>
+                            <span>{task.estimatedHours || (task.estimatedDays * 8)} hours</span>
+                          </div>
                         </div>
                       </div>
-                      <button onClick={() => handleCreateTask(task)} disabled={isCreating} className="px-6 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-xl disabled:opacity-50 whitespace-nowrap transition">
-                        Create Task
-                      </button>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}

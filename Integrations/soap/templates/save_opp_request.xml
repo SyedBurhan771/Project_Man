@@ -1,26 +1,29 @@
-<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:wss="http://www.adonix.com/WSS" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
    <soapenv:Header/>
    <soapenv:Body>
-      <wss:save soapenv:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+      <wss:save xmlns:wss="http://www.adonix.com/WSS" soapenv:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
          <callContext xsi:type="wss:CAdxCallContext">
             <codeLang xsi:type="xsd:string">ENG</codeLang>
             <poolAlias xsi:type="xsd:string">{pool_alias}</poolAlias>
+            <poolId xsi:type="xsd:string"/>
             <requestConfig xsi:type="xsd:string"><![CDATA[adxwss.optreturn=JSON&adxwss.beautify=true]]></requestConfig>
          </callContext>
-         <publicName xsi:type="xsd:string">WSPROJECT</publicName>
-         <objectXml xsi:type="xsd:string"><![CDATA[<PARAM>
-  <FLD NAME="OPPNUM">{project_number}</FLD>
-  <FLD NAME="SALFCY">{sales_site}</FLD>
-  <FLD NAME="OPPFCY">{operating_site}</FLD>
-  <FLD NAME="OPPCMP">{customer_bp}</FLD>
-  <FLD NAME="OPPREP">{sales_rep_new}</FLD>
-  <FLD NAME="CUR">{currency}</FLD>
-  <FLD NAME="CHGTYP">{rate_type}</FLD>
-  <FLD NAME="OPPTYP">{project_type}</FLD>
-  <FLD NAME="OPPMCN">{contact_relation}</FLD>
-  <FLD NAME="OPPDATOPN">{open_date}</FLD>
-  <FLD NAME="PIMDESAX1">{description}</FLD>
-</PARAM>]]></objectXml>
+         <publicName xsi:type="xsd:string">YPRJBUDGET</publicName>
+         <objectXml xsi:type="xsd:string"><![CDATA[{
+            "PJM0_1": {
+               "SALFCY": "{salesSite}",
+               "OPEDEFFCY": "{salesSite}",
+               "PIMDESAXX": "{description}",
+               "PIMDESAX1": "{description}"
+            },
+            "PJM1_1": {
+               "OPPCMP": "{customerBp}",
+               "OPPREP": "" 
+            },
+            "PJM1_2": {
+               "OPPTYP": "{projectType}"
+            }
+         }]]></objectXml>
       </wss:save>
    </soapenv:Body>
 </soapenv:Envelope>

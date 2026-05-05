@@ -169,7 +169,7 @@ function SearchableDropdown({
   )
 }
 
-function AICreateProject({ buttonText = 'AI Create Project', onSageProjectCreated }) {
+function AICreateProject({ buttonText = 'AI Create Project', onSageProjectCreated, onAIProjectCreated }) {
   const navigate = useNavigate()
 
   const [open, setOpen] = useState(false)
@@ -178,7 +178,7 @@ function AICreateProject({ buttonText = 'AI Create Project', onSageProjectCreate
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const messagesEndRef = useRef(null)
+  const chatContainerRef = useRef(null)
 
   const [sageForm, setSageForm] = useState({
     site: '',
@@ -188,18 +188,7 @@ function AICreateProject({ buttonText = 'AI Create Project', onSageProjectCreate
     category: '010',
     sales_rep: '',
   })
-  const [modifyForm, setModifyForm] = useState({
-    project_id: '',
-    site: '',
-    customer: '',
-    description: '',
-    short_desc: '',
-    category: '010',
-    sales_rep: '',
-  })
-
   const [isSubmittingSage, setIsSubmittingSage] = useState(false)
-  const [isSubmittingModify, setIsSubmittingModify] = useState(false)
   const [modalStatus, setModalStatus] = useState(null)
   const closeTimerRef = useRef(null)
 
@@ -209,7 +198,12 @@ function AICreateProject({ buttonText = 'AI Create Project', onSageProjectCreate
   const [isMasterDataLoading, setIsMasterDataLoading] = useState(true)
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTo({
+        top: chatContainerRef.current.scrollHeight,
+        behavior: 'smooth',
+      })
+    }
   }, [messages, isLoading])
 
   useEffect(() => {
@@ -390,6 +384,20 @@ function AICreateProject({ buttonText = 'AI Create Project', onSageProjectCreate
       const result = await response.json().catch(() => ({}))
 
       if (response.ok && result.success) {
+        // Notify parent so it can add the new project to the list in real-time
+        if (typeof onAIProjectCreated === 'function') {
+          onAIProjectCreated({
+            project_id: result.project_id || '',
+            name: project.name || '',
+            description: project.description || '',
+            category: project.category || '',
+            dueDate: project.dueDate || '',
+            durationDays: project.estimatedDurationDays || project.duration || 60,
+            teamSize: project.teamSize || 1,
+            progress: project.progress || 0,
+            raw: result.data || null,
+          })
+        }
         showStatus('success', `AI project created successfully. Project ID: ${result.project_id || 'N/A'}`)
         closePanelAfterSuccess()
       } else {
@@ -398,6 +406,41 @@ function AICreateProject({ buttonText = 'AI Create Project', onSageProjectCreate
     } catch (err) {
       showStatus('error', 'Error connecting to server: ' + err.message)
     }
+  }
+
+  const handleNavigateToDraft = (project) => {
+    const draftId = `draft-ai-${Date.now()}`
+    const draftProject = {
+      id: draftId,
+      name: project.name || 'AI Generated Project',
+      code: 'Pending ID',
+      category: project.category || 'AI / Draft',
+      status: 'Draft',
+      health: 'good',
+      progress: 0,
+      endDate: project.dueDate || '-',
+      duration: project.estimatedDurationDays || project.duration || 60,
+      subtasks: [],
+      source: 'ai-draft',
+      sageDraft: true,
+      description: project.description || '',
+      sageX3: {
+        projectNum: '',
+        salesSite: '',
+        operatingSite: '',
+        customerBP: '',
+        salesRep: '',
+        currency: 'EUR',
+        rateType: '',
+        projectType: '',
+        contactRelation: '',
+        openDate: '',
+        projectName: '',
+      },
+    }
+
+    closePanel()
+    navigate(`/projects/${draftId}`, { state: { project: draftProject } })
   }
 
   const submitSageProject = async (e) => {
@@ -446,44 +489,7 @@ function AICreateProject({ buttonText = 'AI Create Project', onSageProjectCreate
     }
   }
 
-  const submitModifyProject = async (e) => {
-    e.preventDefault()
 
-    if (!modifyForm.project_id || !modifyForm.site || !modifyForm.customer || !modifyForm.description || !modifyForm.short_desc || !modifyForm.category) {
-      showStatus('error', 'Please fill all required fields for modify.')
-      return
-    }
-    if (!isAllowedCode(modifyForm.site, sites)) {
-      showStatus('error', 'Please choose a valid Site code from the dropdown list.')
-      return
-    }
-    if (!isAllowedCode(modifyForm.customer, customers)) {
-      showStatus('error', 'Please choose a valid Customer code from the dropdown list.')
-      return
-    }
-
-    setIsSubmittingModify(true)
-    try {
-      const { project_id, ...payload } = modifyForm
-      const response = await fetch(`${API_URL}/api/soap/projects/${encodeURIComponent(project_id)}/`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-
-      const result = await response.json().catch(() => ({}))
-      if (response.ok && result.success) {
-        showStatus('success', `Sage project updated successfully. Project ID: ${result.project_id || project_id}`)
-        closePanelAfterSuccess()
-      } else {
-        showStatus('error', 'Failed to modify Sage project: ' + (result.error || `HTTP ${response.status}`))
-      }
-    } catch (err) {
-      showStatus('error', 'Error connecting to server: ' + err.message)
-    } finally {
-      setIsSubmittingModify(false)
-    }
-  }
 
   const resetConversation = () => {
     setMessages([])
@@ -504,16 +510,7 @@ function AICreateProject({ buttonText = 'AI Create Project', onSageProjectCreate
         <p className="text-sm text-gray-600">Go to the project details screen and fill all Sage project fields before submission.</p>
       </button>
 
-      <button
-        onClick={() => setMode('sage-modify')}
-        className="w-full text-left p-4 bg-white border border-gray-200 rounded-xl hover:border-amber-400 hover:shadow-sm transition"
-      >
-        <div className="flex items-center gap-3 mb-2">
-          <PencilLine className="w-5 h-5 text-amber-600" />
-          <span className="font-semibold text-gray-900">Modify Sage Project</span>
-        </div>
-        <p className="text-sm text-gray-600">Update an existing Sage X3 project using project ID and form data.</p>
-      </button>
+
 
       <button
         onClick={() => setMode('ai')}
@@ -611,102 +608,12 @@ function AICreateProject({ buttonText = 'AI Create Project', onSageProjectCreate
     </form>
   )
 
-  const renderModifyForm = () => (
-    <form onSubmit={submitModifyProject} className="p-5 space-y-3 bg-gray-50 overflow-y-auto h-full">
-      {/* ... same as before (Project ID + dropdowns + inputs) ... */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Project ID *</label>
-        <input
-          value={modifyForm.project_id}
-          onChange={(e) => setModifyForm((prev) => ({ ...prev, project_id: e.target.value }))}
-          className="w-full p-2.5 border border-gray-300 rounded-lg"
-          placeholder="ES0112604000075"
-          required
-        />
-      </div>
 
-      <SearchableDropdown
-        label="Site Code"
-        value={modifyForm.site}
-        onChange={(selectedValue) => setModifyForm((prev) => ({ ...prev, site: selectedValue }))}
-        options={sites}
-        placeholder="Search site code..."
-        required
-        disabled={isMasterDataLoading}
-        loading={isMasterDataLoading}
-      />
-
-      <SearchableDropdown
-        label="Customer"
-        value={modifyForm.customer}
-        onChange={(selectedValue) => setModifyForm((prev) => ({ ...prev, customer: selectedValue }))}
-        options={customers}
-        placeholder="Search customer..."
-        required
-        disabled={isMasterDataLoading}
-        loading={isMasterDataLoading}
-      />
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Description *</label>
-        <input
-          value={modifyForm.description}
-          onChange={(e) => setModifyForm((prev) => ({ ...prev, description: e.target.value }))}
-          className="w-full p-2.5 border border-gray-300 rounded-lg"
-          maxLength={250}
-          required
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Short Description *</label>
-        <input
-          value={modifyForm.short_desc}
-          onChange={(e) => setModifyForm((prev) => ({ ...prev, short_desc: e.target.value }))}
-          className="w-full p-2.5 border border-gray-300 rounded-lg"
-          maxLength={80}
-          required
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Category *</label>
-        <select
-          value={modifyForm.category}
-          onChange={(e) => setModifyForm((prev) => ({ ...prev, category: e.target.value }))}
-          className="w-full p-2.5 border border-gray-300 rounded-lg bg-white"
-          required
-        >
-          <option value="010">010</option>
-          <option value="020">020</option>
-          <option value="ETO">ETO</option>
-        </select>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Sales Rep</label>
-        <input
-          value={modifyForm.sales_rep}
-          onChange={(e) => setModifyForm((prev) => ({ ...prev, sales_rep: e.target.value }))}
-          className="w-full p-2.5 border border-gray-300 rounded-lg"
-          placeholder="Optional"
-        />
-      </div>
-
-      <button
-        type="submit"
-        disabled={isSubmittingModify || isMasterDataLoading}
-        className="w-full py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-medium hover:from-green-700 hover:to-emerald-700 disabled:opacity-60"
-      >
-        {isSubmittingModify ? 'Updating...' : 'Modify Sage Project'}
-      </button>
-    </form>
-  )
 
   const renderAIChat = () => (
     <>
       {/* ... exact same AI chat UI as before (no changes needed) ... */}
-      <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-gray-50">
+      <div ref={chatContainerRef} className="flex-1 p-4 overflow-y-auto space-y-4 bg-gray-50">
         {messages.length === 0 && (
           <div className="text-center text-gray-500 py-10">
             Describe your project idea or ask for suggestions...
@@ -745,7 +652,7 @@ function AICreateProject({ buttonText = 'AI Create Project', onSageProjectCreate
                         {project.teamSize && <div><strong>Team:</strong> {project.teamSize} members</div>}
                       </div>
                       <button
-                        onClick={() => handleCreateAIProject(project)}
+                        onClick={() => handleNavigateToDraft(project)}
                         className="mt-5 w-full py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-medium hover:from-green-700 hover:to-emerald-700 text-sm transition-all"
                       >
                         Create This AI Project
@@ -765,8 +672,6 @@ function AICreateProject({ buttonText = 'AI Create Project', onSageProjectCreate
             </div>
           </div>
         )}
-
-        <div ref={messagesEndRef} />
       </div>
 
       <div className="p-4 border-t bg-white">
@@ -884,7 +789,6 @@ function AICreateProject({ buttonText = 'AI Create Project', onSageProjectCreate
 
           {mode === 'menu' && renderModeMenu()}
           {mode === 'sage' && renderSageForm()}
-          {mode === 'sage-modify' && renderModifyForm()}
           {mode === 'ai' && renderAIChat()}
         </div>
       )}
