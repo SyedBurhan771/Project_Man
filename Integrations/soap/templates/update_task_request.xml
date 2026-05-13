@@ -1,0 +1,30 @@
+<soapenv:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+                  xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+                  xmlns:wss="http://www.adonix.com/WSS">
+  <soapenv:Header/>
+  <soapenv:Body>
+    <wss:run soapenv:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+      <callContext xsi:type="wss:CAdxCallContext">
+        <codeLang xsi:type="xsd:string">ENG</codeLang>
+        <poolAlias xsi:type="xsd:string">APDEMO</poolAlias>
+        <poolId xsi:type="xsd:string"/>
+        <requestConfig xsi:type="xsd:string">
+          <![CDATA[adxwss.optreturn=JSON&adxwss.beautify=true&adxwss.trace.on=off]]>
+        </requestConfig>
+      </callContext>
+      <publicName xsi:type="xsd:string">AOWSIMPORT</publicName>
+      <inputXml xsi:type="xsd:string">
+      <![CDATA[{
+        "GRP1": {
+          "I_MODIMP": "AOPPORPJMI",
+          "I_AOWSTA": "NO",
+          "I_EXEC": "REALTIME",
+          "I_RECORDSEP": "|",
+          "I_FILE": "'P','U','{OPPNUM}'|'PT','U','{TCACOD}','{TASCOD}',0,'','{TASFCY}','{TASDESAXX}','{TASDESAX1}','{TASSTARTDT}','{TASENDDT}',{TASDUR},,1,'',,'R1',1,'',''|END"
+        }
+      }]]>
+      </inputXml>
+    </wss:run>
+  </soapenv:Body>
+</soapenv:Envelope>

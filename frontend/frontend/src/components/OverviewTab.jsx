@@ -1,5 +1,6 @@
 import React from 'react';
-import { Clock, ChevronRight } from 'lucide-react';
+import { Clock, ChevronRight, Calendar } from 'lucide-react';
+import GanttChart from './GanttChart';
 
 // Calculates live progress from subtask statuses
 // completed = 1 point, in-progress = 0.5 points, todo = 0
@@ -73,6 +74,9 @@ export default function OverviewTab({ project, onViewTasks }) {
           </div>
         </div>
       </div>
+
+      {/* Gantt Chart Timeline */}
+      <GanttChart subtasks={subtasks} />
 
       {/* Team Members */}
       {project.team && project.team.length > 0 && (

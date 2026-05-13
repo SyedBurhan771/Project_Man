@@ -293,6 +293,7 @@ function GeneralTab({ project }) {
     contactRelation: '',
     openDate: '',
     description: '',
+    short_desc: '',
   });
 
   const mandatoryMissing =
@@ -439,7 +440,8 @@ function GeneralTab({ project }) {
       projectType: sx.projectType || '',
       contactRelation: sx.contactRelation || '',
       openDate: sx.openDate || '',
-      description: sx.projectName || project.description || project.name || '',
+      description: project.description || sx.projectName || project.name || '',
+      short_desc: sx.short_desc || (project.name || '').substring(0, 80),
     });
   }, [isDraft, project.id, project.name, project.description, sx]);
 
@@ -485,7 +487,7 @@ function GeneralTab({ project }) {
       const createdProject = {
         ...project,
         id: createdProjectId,
-        name: draftForm.description || createdProjectId,
+        name: draftForm.short_desc || draftForm.description || createdProjectId,
         code: createdProjectId,
         status: 'Open',
         sageDraft: false,
@@ -495,7 +497,7 @@ function GeneralTab({ project }) {
           ...draftForm,
           projectNum: createdProjectId,
           openDate: payload.openDate,
-          projectName: draftForm.description || createdProjectId,
+          projectName: draftForm.short_desc || draftForm.description || createdProjectId,
         },
       };
 
@@ -749,7 +751,14 @@ function GeneralTab({ project }) {
                   {isDraft ? (
                     <textarea
                       value={draftForm.description}
-                      onChange={(e) => setDraftForm((prev) => ({ ...prev, description: e.target.value }))}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setDraftForm((prev) => ({ 
+                          ...prev, 
+                          description: val,
+                          short_desc: val.substring(0, 80)
+                        }));
+                      }}
                       placeholder="Services project details"
                       rows={4}
                       className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -764,7 +773,7 @@ function GeneralTab({ project }) {
                     />
                   ) : (
                     <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 leading-relaxed min-h-[80px]">
-                      {(sx.projectName || project.name || 'Project').trim()} project details
+                      {sx.description || project.description || 'No description provided.'}
                     </div>
                   )}
                 </Field>

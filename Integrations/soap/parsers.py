@@ -100,12 +100,30 @@ def parse_sage_response(xml_string: str) -> Dict[str, Any]:
         }
 
     error_text = _extract_error_text(sage_data)
+    project_id = _find_key_deep(sage_data, "OPPNUM")
+    task_id = _find_key_deep(sage_data, "TASCOD")
 
-    # Only trust status codes — never infer success from message text
-    if status_text in ("1", "2"):
-        project_id = _find_key_deep(sage_data, "OPPNUM")
-        task_id = _find_key_deep(sage_data, "TASCOD")
+    # Determine success: 
+    # 1. Status is "1" or "2" (standard success)
+    # 2. OR Status is "0" but we found a project/task ID (Sage often returns 0 with a "Creation of..." message)
+    # 3. OR Status is "0" and the message explicitly mentions creation or modification
+    is_success = status_text in ("1", "2")
+    
+    if status_text == "0":
+        if project_id or task_id:
+            is_success = True
+        elif error_text:
+            # Sage X3 often returns status 0 for successful imports/modifications with a text message
+            norm_err = error_text.lower()
+            # Be very lenient with keywords to catch all success messages
+            success_keywords = [
+                "creation", "modification", "record created", 
+                "record modified", "successfully", "modified", "created"
+            ]
+            if any(kw in norm_err for kw in success_keywords):
+                is_success = True
 
+    if is_success:
         return {
             "success": True,
             "project_id": project_id,

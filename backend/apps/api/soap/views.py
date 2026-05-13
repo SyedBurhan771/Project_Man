@@ -6,7 +6,7 @@ from rest_framework.views import APIView
 import json
 from pathlib import Path
 
-from Integrations.soap.client import create_opp_project, create_pjm_project, get_sage_master_data, modify_pjm_project, create_task
+from Integrations.soap.client import create_opp_project, create_pjm_project, get_sage_master_data, modify_pjm_project, create_task, create_sub_task, update_task, update_sub_task
 from Integrations.soap.parsers import parse_sage_response
 from .models import SoapProjectTransaction, SoapTaskTransaction, SageCustomer, SageSite
 
@@ -150,7 +150,7 @@ class CreateProjectAPIView(APIView):
                 'projectType': str(payload.get('projectType') or ''),
                 'contactRelation': str(payload.get('contactRelation') or ''),
                 'openDate': str(payload.get('openDate') or ''),
-                'projectName': str(payload.get('description') or ''),
+                'projectName': str(payload.get('short_desc') or payload.get('projectName') or payload.get('description') or '').strip()[:80],
             })
             seen_project_ids.add(project_id)
 
@@ -293,7 +293,7 @@ class CreateTaskSerializer(serializers.Serializer):
         if not mapped.get('oppnum') or not mapped.get('tascod'):
             raise serializers.ValidationError("oppnum (project ID) and tascod (task ID) are required fields.")
             
-        # Format dates to MM/DD/YY as expected by Sage X3
+        # Format dates to MM/DD/YY as expected by Sage X3 AOWSIMPORT (Confirmed by working SOAP UI example)
         for date_field in ['tasstartdt', 'tasenddt']:
             raw_date = mapped.get(date_field)
             if len(raw_date) == 10 and '/' in raw_date:
@@ -308,6 +308,35 @@ class CreateTaskSerializer(serializers.Serializer):
             elif not raw_date:
                 mapped[date_field] = timezone.now().strftime('%m/%d/%y')
 
+        return mapped
+
+
+class CreateSubTaskSerializer(CreateTaskSerializer):
+    taspae = serializers.CharField(max_length=40, required=False, allow_blank=True)
+    tasPaen = serializers.CharField(max_length=40, required=False, allow_blank=True) # camelCase version if needed
+
+    def validate(self, attrs):
+        mapped = super().validate(attrs)
+        # Add taspae to mapped data
+        mapped['taspae'] = str(attrs.get('taspae') or attrs.get('tasPaen') or '').strip()
+        
+        if not mapped.get('taspae'):
+            raise serializers.ValidationError("taspae (Parent Task ID) is required for sub-tasks.")
+            
+        return mapped
+
+
+class UpdateTaskSerializer(CreateTaskSerializer):
+    def validate(self, attrs):
+        mapped = super().validate(attrs)
+        # For update, we still need oppnum and tascod as identifiers
+        return mapped
+
+
+class UpdateSubTaskSerializer(CreateSubTaskSerializer):
+    def validate(self, attrs):
+        mapped = super().validate(attrs)
+        # For sub-task update, we need taspae as well (handled by super)
         return mapped
 
 
@@ -331,7 +360,7 @@ class CreateTaskAPIView(APIView):
         oppnum = request.query_params.get('oppnum')
         transactions = (
             SoapTaskTransaction.objects
-            .filter(operation=SoapTaskTransaction.OPERATION_CREATE, success=True)
+            .filter(success=True)
             .order_by('-created_at')
         )
 
@@ -363,6 +392,7 @@ class CreateTaskAPIView(APIView):
                 'shortDesc': str(payload.get('tasdesax1') or ''),
                 'duration': str(payload.get('tasdur') or ''),
                 'fcy': str(payload.get('tasfcy') or ''),
+                'parentCode': str(payload.get('taspae') or ''),
                 'oppnum': txn_oppnum,
                 'created_at': txn.created_at,
             })
@@ -371,14 +401,14 @@ class CreateTaskAPIView(APIView):
         return Response({'success': True, 'tasks': unique_tasks}, status=200)
 
     def post(self, request):
-        print("=== RAW REQUEST DATA FOR TASK CREATE ===")
-        print(json.dumps(request.data, indent=2))
-        print("=====================================")
-
         serializer = CreateTaskSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         payload = serializer.validated_data
+
+        print("=== VALIDATED PAYLOAD FOR SAGE X3 TASK CREATE ===")
+        print(json.dumps(payload, indent=2))
+        print("================================================")
 
         raw_xml_response = ''
         parsed_result = {}
@@ -393,6 +423,99 @@ class CreateTaskAPIView(APIView):
 
         if parsed_result.get('success'):
             return Response(parsed_result, status=201)
+
+        return Response(parsed_result, status=400)
+
+
+class CreateSubTaskAPIView(APIView):
+    def post(self, request):
+        serializer = CreateSubTaskSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        payload = serializer.validated_data
+
+        print("=== VALIDATED PAYLOAD FOR SAGE X3 SUB-TASK CREATE ===")
+        print(json.dumps(payload, indent=2))
+        print("===================================================")
+
+        raw_xml_response = ''
+        parsed_result = {}
+
+        try:
+            raw_xml_response = create_sub_task(payload)
+            parsed_result = parse_sage_response(raw_xml_response)
+        except Exception as exc:
+            parsed_result = {'success': False, 'error': str(exc)}
+
+        _record_task_transaction(request, SoapTaskTransaction.OPERATION_CREATE, payload, raw_xml_response, parsed_result)
+
+        if parsed_result.get('success'):
+            return Response(parsed_result, status=201)
+
+        return Response(parsed_result, status=400)
+
+
+class UpdateTaskAPIView(APIView):
+    def put(self, request, task_id):
+        # Inject task_id from URL into data if not present
+        data = request.data.copy()
+        if 'tascod' not in data and 'tasCod' not in data:
+            data['tascod'] = task_id
+
+        serializer = UpdateTaskSerializer(data=data)
+        serializer.is_valid(raise_exception=True)
+
+        payload = serializer.validated_data
+
+        print(f"=== VALIDATED PAYLOAD FOR SAGE X3 TASK UPDATE [{task_id}] ===")
+        print(json.dumps(payload, indent=2))
+        print("==========================================================")
+
+        raw_xml_response = ''
+        parsed_result = {}
+
+        try:
+            raw_xml_response = update_task(payload)
+            parsed_result = parse_sage_response(raw_xml_response)
+        except Exception as exc:
+            parsed_result = {'success': False, 'error': str(exc)}
+
+        _record_task_transaction(request, SoapTaskTransaction.OPERATION_MODIFY, payload, raw_xml_response, parsed_result)
+
+        if parsed_result.get('success'):
+            return Response(parsed_result, status=200)
+
+        return Response(parsed_result, status=400)
+
+
+class UpdateSubTaskAPIView(APIView):
+    def put(self, request, task_id):
+        data = request.data.copy()
+        if 'tascod' not in data and 'tasCod' not in data:
+            data['tascod'] = task_id
+
+        serializer = UpdateSubTaskSerializer(data=data)
+        serializer.is_valid(raise_exception=True)
+
+        payload = serializer.validated_data
+
+        print(f"=== VALIDATED PAYLOAD FOR SAGE X3 SUB-TASK UPDATE [{task_id}] ===")
+        print(json.dumps(payload, indent=2))
+        print("=============================================================")
+
+        raw_xml_response = ''
+        parsed_result = {}
+
+        try:
+            raw_xml_response = update_sub_task(payload)
+            parsed_result = parse_sage_response(raw_xml_response)
+        except Exception as exc:
+            parsed_result = {'success': False, 'error': str(exc)}
+
+        _record_task_transaction(request, SoapTaskTransaction.OPERATION_MODIFY, payload, raw_xml_response, parsed_result)
+
+        if parsed_result.get('success'):
+            return Response(parsed_result, status=200)
 
         return Response(parsed_result, status=400)
 

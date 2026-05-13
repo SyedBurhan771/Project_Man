@@ -270,7 +270,7 @@ function AICreateProject({ buttonText = 'AI Create Project', onSageProjectCreate
     const draftId = `draft-${Date.now()}`
     const draftProject = {
       id: draftId,
-      name: 'New Sage Project',
+      name: '',
       code: 'Pending ID',
       category: 'Sage / Draft',
       status: 'Draft',
@@ -412,7 +412,7 @@ function AICreateProject({ buttonText = 'AI Create Project', onSageProjectCreate
     const draftId = `draft-ai-${Date.now()}`
     const draftProject = {
       id: draftId,
-      name: project.name || 'AI Generated Project',
+      name: project.name || 'AI Generated Project', // Short name for UI cards
       code: 'Pending ID',
       category: project.category || 'AI / Draft',
       status: 'Draft',
@@ -423,7 +423,7 @@ function AICreateProject({ buttonText = 'AI Create Project', onSageProjectCreate
       subtasks: [],
       source: 'ai-draft',
       sageDraft: true,
-      description: project.description || '',
+      description: project.description || '', // Map long AI Description to Sage Description field
       sageX3: {
         projectNum: '',
         salesSite: '',
@@ -435,7 +435,8 @@ function AICreateProject({ buttonText = 'AI Create Project', onSageProjectCreate
         projectType: '',
         contactRelation: '',
         openDate: '',
-        projectName: '',
+        projectName: project.name || '', // Short name for the Title Header
+        short_desc: (project.name || '').substring(0, 80), // Map short name to Sage Short Desc
       },
     }
 

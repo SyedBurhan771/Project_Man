@@ -149,7 +149,7 @@ function ProjectDetail({ createMode = false }) {
 
           return {
             id: projectId,
-            name: description || projectId || "New Sage Project",
+            name: p.projectName || p.short_desc || description || projectId || "Untitled Sage Project",
             code: projectId || "Pending ID",
             category: `${site} / ${category}`,
             status: "Open",
@@ -201,7 +201,7 @@ function ProjectDetail({ createMode = false }) {
     if (!routeStateProject || String(routeStateProject.id) !== String(id)) return null;
     return {
       ...routeStateProject,
-      description: routeStateProject.description || "Project created from UI.",
+      description: routeStateProject.description || "",
       customer: routeStateProject.customer || { name: "Unknown", contactName: "-", salesRepName: "-" },
       sageX3: routeStateProject.sageX3 || null,
       startDate: routeStateProject.startDate || "-",
@@ -320,10 +320,58 @@ function ProjectDetail({ createMode = false }) {
     return null;
   }, [dbProjects, dbSubtasksForProject, id, persistedSageProjects, routeProject]);
 
+  const [sageSubtasks, setSageSubtasks] = useState([]);
+
+  useEffect(() => {
+    const oppnum = project?.projectNum || project?.id;
+    if (!oppnum || String(oppnum).startsWith('draft')) return;
+
+    const fetchSageTasks = async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/soap/tasks/?oppnum=${oppnum}`);
+        const result = await response.json();
+        if (result.success && result.tasks) {
+          const mapped = result.tasks.map(t => ({
+            id: t.taskCode,
+            title: t.description || t.shortDesc || t.taskCode,
+            status: String(t.status) === '1' ? 'todo' : String(t.status) === '2' ? 'in-progress' : String(t.status) === '3' ? 'completed' : 'todo',
+            progress: t.progress || 0,
+            personResponsible: 'Unassigned',
+            endDate: t.endDate || t.startDate || '—',
+            avatar: 'SA',
+          }));
+          setSageSubtasks(mapped);
+        }
+      } catch (err) {
+        console.error("Error fetching sage tasks for project detail:", err);
+      }
+    };
+
+    fetchSageTasks();
+  }, [project?.projectNum, project?.id]);
+
   useEffect(() => {
     if (!project) return;
-    setLiveSubtasks(project.subtasks || []);
-  }, [project.subtasks]);
+    
+    // Combine local subtasks and mapped Sage subtasks, ensuring no duplicates by ID
+    const localTasks = project.subtasks || [];
+    const combined = [...localTasks];
+    
+    sageSubtasks.forEach(st => {
+      if (!combined.find(lt => String(lt.id) === String(st.id))) {
+        combined.push(st);
+      }
+    });
+
+    // Sort combined tasks by id (T-01, T-02, etc.) in ascending order
+    combined.sort((a, b) => {
+      const idA = String(a.id || '');
+      const idB = String(b.id || '');
+      return idA.localeCompare(idB, undefined, { numeric: true, sensitivity: 'base' });
+    });
+
+    setLiveSubtasks(combined);
+  }, [project, sageSubtasks]);
 
   // Intersection observer & hash handling (unchanged)
   useEffect(() => {

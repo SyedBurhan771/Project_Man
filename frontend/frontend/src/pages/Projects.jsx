@@ -161,7 +161,7 @@ function Projects() {
 
           return {
             id: projectId || `sage-db-${Date.now()}`,
-            name: description || projectId || 'New Sage Project',
+            name: p.projectName || p.short_desc || p.description || projectId || 'Untitled Sage Project',
             code: projectId || 'Pending ID',
             category: `${site} / ${category}`,
             status: 'Open',
@@ -187,7 +187,7 @@ function Projects() {
 
   const handleSageProjectCreated = (created) => {
     const projectId = String(created?.project_id || '').trim();
-    const description = created?.description || projectId || 'New Sage Project';
+    const description = created?.projectName || created?.short_desc || created?.description || projectId || 'Untitled Sage Project';
     const site = created?.site || 'Sage';
     const category = created?.category || '010';
 

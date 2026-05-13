@@ -7,7 +7,7 @@ from .models import Project, Task
 
 # ====================== COLAB OLLAMA CONFIGURATION ======================
 # ←←← CHANGE THIS URL EVERY TIME YOU GET A NEW LINK FROM GOOGLE COLAB
-OLLAMA_HOST = "http://qrbhn-35-240-246-73.run.pinggy-free.link"   # ← Paste your current Pinggy URL here
+OLLAMA_HOST = "http://jbixd-34-87-158-198.run.pinggy-free.link"   # ← Paste your current  URL here
 OLLAMA_MODEL = "phi3:mini"
 
 # Create remote client (this talks to Google Colab)
@@ -183,14 +183,16 @@ def generate_tasks_for_project(request):
         project = data.get("project", {})
         user_prompt = data.get("prompt", "")
 
+        from datetime import date
+        current_date = date.today().strftime("%Y-%m-%d")
+
         TASK_SYSTEM_PROMPT = f"""You are a certified PMP (Project Management Professional) expert helping to structure a complete project management plan.
 
 Project Details:
 - Project Name: {project.get('name', 'Unnamed Project')}
 - Description: {project.get('description', '')}
 - Category: {project.get('category', '')}
-
-
+- Today's Date: {current_date}
 
 You must generate realistic, actionable tasks according to the user's request.
 
@@ -221,10 +223,14 @@ In both cases:
 
 {{
   "title": "Phase - Task Title",
-  "description": "Clear, concise, and professional description of the task.",
+  "description": "Professional description of the task (STRICTLY maximum 80 characters).",
   "estimatedDays": integer (realistic value between 1 and 30),
   "estimatedHours": integer,
-  "status": "todo"
+  "status": "todo",
+  "category": "Pick one from: MAT, MATERIAL, MISC, MIXED, PHASE, PROJECT, QA",
+  "startDate": "mm-dd-yyyy (must be current or future year)",
+  "endDate": "mm-dd-yyyy (must be current or future year)",
+  "duration": integer (realistic value between 1 and 9)
 }}
 
 Important Guidelines:
@@ -261,10 +267,13 @@ Important Guidelines:
             elif isinstance(parsed, dict) and "tasks" in parsed:
                 result["tasks"] = parsed["tasks"]
         except:
-            match = re.search(r'\[\s*\{.*?\}\s*\]', ai_content, re.DOTALL)
+            # Fallback: try to find the largest [...] block in the content
+            match = re.search(r'\[.*\]', ai_content, re.DOTALL)
             if match:
                 try:
-                    result["tasks"] = json.loads(match.group(0))
+                    parsed_match = json.loads(match.group(0))
+                    if isinstance(parsed_match, list):
+                        result["tasks"] = parsed_match
                 except:
                     pass
 

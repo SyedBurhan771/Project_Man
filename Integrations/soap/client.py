@@ -53,6 +53,7 @@ def _render_template(xml_template: str, data: Dict[str, Any]) -> str:
         'TASSTARTDT': str(data.get('tasstartdt', '')).strip(),
         'TASENDDT': str(data.get('tasenddt', '')).strip(),
         'TASDUR': str(data.get('tasdur', '1')).strip(),
+        'TASPAE': str(data.get('taspae', '')).strip(),
 
         
         # Legacy fields (as backup)
@@ -212,5 +213,35 @@ def create_task(data: Dict[str, Any]) -> str:
     print("=== FINAL XML PAYLOAD FOR TASK CREATE ===")
     print(payload)
     print("========================================\n")
+    
+    return _send_soap_request(payload, soap_action='run')
+def create_sub_task(data: Dict[str, Any]) -> str:
+    xml_template = _load_template('sub_task_request.xml')
+    payload = _render_template(xml_template, data)
+    
+    print("=== FINAL XML PAYLOAD FOR SUB-TASK CREATE ===")
+    print(payload)
+    print("============================================\n")
+    
+    return _send_soap_request(payload, soap_action='run')
+
+def update_task(data: Dict[str, Any]) -> str:
+    xml_template = _load_template('update_task_request.xml')
+    payload = _render_template(xml_template, data)
+    
+    print("=== FINAL XML PAYLOAD FOR TASK UPDATE ===")
+    print(payload)
+    print("========================================\n")
+    
+    return _send_soap_request(payload, soap_action='run')
+
+
+def update_sub_task(data):
+    xml_template = _load_template('update_subtask_request.xml')
+    payload = _render_template(xml_template, data)
+    
+    print("=== FINAL XML PAYLOAD FOR SUB-TASK UPDATE ===")
+    print(payload)
+    print("============================================\n")
     
     return _send_soap_request(payload, soap_action='run')
